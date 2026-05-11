@@ -1,15 +1,16 @@
 import { StatusCard } from "@/components/status-card";
+import Link from "next/link";
 
 const stats = [
-  { label: "Report issues", value: "Roads" },
-  { label: "Track progress", value: "Repairs" },
-  { label: "Inform decisions", value: "Data" },
+  { label: "Report issues", value: "Create" },
+  { label: "Track progress", value: "Status" },
+  { label: "Confirm impact", value: "Upvotes" },
 ];
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#f7f8f4] text-[#172019]">
-      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-12 sm:px-8 lg:px-10">
+    <main>
+      <section className="mx-auto flex min-h-[calc(100vh-81px)] w-full max-w-6xl flex-col justify-center px-6 py-12 sm:px-8 lg:px-10">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#2f6f4e]">
@@ -24,18 +25,18 @@ export default function Home() {
               that need attention.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <a
+              <Link
                 className="inline-flex h-12 items-center justify-center rounded-md bg-[#1f6f4a] px-5 text-sm font-semibold text-white transition hover:bg-[#185a3c]"
-                href="mailto:civic@example.com"
+                href="/reports/new"
               >
-                Contact project team
-              </a>
-              <a
+                Create a report
+              </Link>
+              <Link
                 className="inline-flex h-12 items-center justify-center rounded-md border border-[#b7c7bb] px-5 text-sm font-semibold text-[#26352b] transition hover:bg-white"
-                href="#status"
+                href="/reports"
               >
-                View project status
-              </a>
+                Browse reports
+              </Link>
             </div>
           </div>
 

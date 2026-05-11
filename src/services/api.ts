@@ -1,2 +1,137 @@
+import type {
+  ApiResponse,
+  AuthResponse,
+  CategoryResponse,
+  ConfirmReportResponse,
+  CreateReportRequest,
+  LoginRequest,
+  RegisterRequest,
+  ReportListItemResponse,
+  ReportResponse,
+  ReportStatus,
+} from "@/types/api";
+import { ApiError } from "@/types/api";
+
 export const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
+
+type RequestOptions = {
+  method?: "GET" | "POST" | "PUT";
+  body?: unknown;
+  token?: string;
+};
+
+async function request<T>(
+  path: string,
+  { method = "GET", body, token }: RequestOptions = {},
+): Promise<T> {
+  const headers = new Headers({
+    Accept: "application/json",
+  });
+
+  if (body !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(getRequestUrl(path), {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError("Unable to reach the PublicPulse API.", 0);
+  }
+
+  const payload = await readPayload<T>(response);
+
+  if (!response.ok || !payload.success || payload.data === null) {
+    throw new ApiError(
+      payload.message || messageForStatus(response.status),
+      response.status,
+    );
+  }
+
+  return payload.data;
+}
+
+async function readPayload<T>(response: Response): Promise<ApiResponse<T>> {
+  try {
+    return (await response.json()) as ApiResponse<T>;
+  } catch {
+    return {
+      success: false,
+      message: messageForStatus(response.status),
+      data: null,
+    };
+  }
+}
+
+function messageForStatus(status: number) {
+  if (status === 0) return "Unable to reach the PublicPulse API.";
+  if (status === 400) return "Check the form and try again.";
+  if (status === 401) return "Log in to continue.";
+  if (status === 403) return "You do not have permission to do that.";
+  if (status === 404) return "That record could not be found.";
+  if (status >= 500) return "The API is unavailable. Try again shortly.";
+
+  return "Something went wrong. Try again.";
+}
+
+function getRequestUrl(path: string) {
+  if (typeof window === "undefined") {
+    return `${apiBaseUrl}${path}`;
+  }
+
+  return `/api/publicpulse${path}`;
+}
+
+export const publicPulseApi = {
+  register(requestBody: RegisterRequest) {
+    return request<AuthResponse>("/api/Auth/register", {
+      method: "POST",
+      body: requestBody,
+    });
+  },
+  login(requestBody: LoginRequest) {
+    return request<AuthResponse>("/api/Auth/login", {
+      method: "POST",
+      body: requestBody,
+    });
+  },
+  listCategories() {
+    return request<CategoryResponse[]>("/api/Categories");
+  },
+  listReports() {
+    return request<ReportListItemResponse[]>("/api/Reports");
+  },
+  getReport(id: string) {
+    return request<ReportResponse>(`/api/Reports/${id}`);
+  },
+  createReport(requestBody: CreateReportRequest, token: string) {
+    return request<ReportResponse>("/api/Reports", {
+      method: "POST",
+      body: requestBody,
+      token,
+    });
+  },
+  confirmReport(id: string) {
+    return request<ConfirmReportResponse>(`/api/Reports/${id}/confirmations`, {
+      method: "POST",
+    });
+  },
+  updateReportStatus(id: string, status: ReportStatus, token: string) {
+    return request<ReportResponse>(`/api/Reports/${id}/status`, {
+      method: "PUT",
+      body: { status },
+      token,
+    });
+  },
+};
