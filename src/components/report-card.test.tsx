@@ -1,5 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { ReportCard } from "@/components/report-card";
+import { I18nProvider } from "@/i18n/client";
+import type { Locale } from "@/i18n/config";
+import { messages } from "@/i18n/messages";
 import type { ReportListItemResponse } from "@/types/api";
 
 const report: ReportListItemResponse = {
@@ -16,7 +19,7 @@ const report: ReportListItemResponse = {
 
 describe("ReportCard", () => {
   it("renders report summary and details link", () => {
-    render(<ReportCard report={report} />);
+    renderReportCard();
 
     expect(screen.getByRole("heading", { name: report.title })).toBeInTheDocument();
     expect(screen.getByText("Drainage")).toBeInTheDocument();
@@ -25,7 +28,26 @@ describe("ReportCard", () => {
     expect(screen.getByText("7")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute(
       "href",
-      "/reports/report-1",
+      "/en/reports/report-1",
+    );
+  });
+
+  it("renders localized report summary in Swahili", () => {
+    renderReportCard("sw");
+
+    expect(screen.getByText("Inaendelea")).toBeInTheDocument();
+    expect(screen.getByText("Mahali")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Tazama maelezo" })).toHaveAttribute(
+      "href",
+      "/sw/reports/report-1",
     );
   });
 });
+
+function renderReportCard(locale: Locale = "en") {
+  return render(
+    <I18nProvider locale={locale} messages={messages[locale]}>
+      <ReportCard report={report} />
+    </I18nProvider>,
+  );
+}

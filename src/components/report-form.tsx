@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Message } from "@/components/message";
+import { useI18n } from "@/i18n/client";
 import { publicPulseApi } from "@/services/api";
 import { addOwnedReport, getStoredAuth } from "@/services/auth-storage";
 import { ApiError, type AuthResponse, type CategoryResponse } from "@/types/api";
@@ -27,6 +28,8 @@ const initialFormState: FormState = {
 
 export function ReportForm() {
   const router = useRouter();
+  const { href, messages } = useI18n();
+  const loadCategoriesError = messages.reportForm.loadCategoriesError;
   const [form, setForm] = useState<FormState>(initialFormState);
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [error, setError] = useState("");
@@ -70,7 +73,7 @@ export function ReportForm() {
         setError(
           caughtError instanceof ApiError
             ? caughtError.message
-            : "Unable to load categories.",
+            : loadCategoriesError,
         );
       } finally {
         if (isMounted) setIsLoadingCategories(false);
@@ -82,7 +85,7 @@ export function ReportForm() {
     return () => {
       isMounted = false;
     };
-  }, [auth, hasCheckedAuth]);
+  }, [auth, hasCheckedAuth, loadCategoriesError]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,12 +101,12 @@ export function ReportForm() {
     };
 
     if (Object.values(trimmedForm).some((value) => !value)) {
-      setError("Complete all report fields before submitting.");
+      setError(messages.reportForm.completeFields);
       return;
     }
 
     if (!auth) {
-      setError("Log in to create a report.");
+      setError(messages.reportForm.loginToCreate);
       return;
     }
 
@@ -112,13 +115,13 @@ export function ReportForm() {
     try {
       const createdReport = await publicPulseApi.createReport(trimmedForm, auth.token);
       addOwnedReport(auth.userId, createdReport.id);
-      router.push(`/reports/${createdReport.id}`);
+      router.push(href(`/reports/${createdReport.id}`));
       router.refresh();
     } catch (caughtError) {
       setError(
         caughtError instanceof ApiError
           ? caughtError.message
-          : "Unable to create the report.",
+          : messages.reportForm.createError,
       );
     } finally {
       setIsSubmitting(false);
@@ -126,13 +129,13 @@ export function ReportForm() {
   }
 
   if (!hasCheckedAuth) {
-    return <Message>Checking authentication...</Message>;
+    return <Message>{messages.reportForm.checkingAuth}</Message>;
   }
 
   if (!auth) {
     return (
-      <Message title="Authentication required">
-        Log in or register before creating an infrastructure report.
+      <Message title={messages.reportForm.authRequiredTitle}>
+        {messages.reportForm.authRequiredBody}
       </Message>
     );
   }
@@ -141,13 +144,13 @@ export function ReportForm() {
     <form className="grid gap-5" onSubmit={handleSubmit}>
       {error ? <Message tone="error">{error}</Message> : null}
       <Field
-        label="Title"
+        label={messages.reportForm.title}
         value={form.title}
         onChange={(value) => setForm({ ...form, title: value })}
         required
       />
       <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
-        Description
+        {messages.reportForm.description}
         <textarea
           className="min-h-32 rounded-md border border-[#b7c7bb] bg-white px-3 py-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
           value={form.description}
@@ -156,7 +159,7 @@ export function ReportForm() {
         />
       </label>
       <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
-        Category
+        {messages.reportForm.category}
         <select
           className="h-11 rounded-md border border-[#b7c7bb] bg-white px-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
           value={form.categoryId}
@@ -164,9 +167,9 @@ export function ReportForm() {
           disabled={isLoadingCategories || categories.length === 0}
           required
         >
-          {isLoadingCategories ? <option>Loading categories...</option> : null}
+          {isLoadingCategories ? <option>{messages.reportForm.loadingCategories}</option> : null}
           {!isLoadingCategories && categories.length === 0 ? (
-            <option>No categories available</option>
+            <option>{messages.reportForm.noCategories}</option>
           ) : null}
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
@@ -176,8 +179,8 @@ export function ReportForm() {
         </select>
       </label>
       <Field
-        label="Photo URL"
-        placeholder="https://example.com/damaged-road.jpg"
+        label={messages.reportForm.photoUrl}
+        placeholder={messages.reportForm.photoPlaceholder}
         type="url"
         value={form.photoUrl}
         onChange={(value) => setForm({ ...form, photoUrl: value })}
@@ -185,13 +188,13 @@ export function ReportForm() {
       />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
-          label="County"
+          label={messages.reportForm.county}
           value={form.county}
           onChange={(value) => setForm({ ...form, county: value })}
           required
         />
         <Field
-          label="Road name"
+          label={messages.reportForm.roadName}
           value={form.roadName}
           onChange={(value) => setForm({ ...form, roadName: value })}
           required
@@ -202,7 +205,7 @@ export function ReportForm() {
         type="submit"
         disabled={isSubmitting || isLoadingCategories || categories.length === 0}
       >
-        {isSubmitting ? "Submitting..." : "Submit report"}
+        {isSubmitting ? messages.reportForm.submitting : messages.reportForm.submit}
       </button>
     </form>
   );

@@ -1,21 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Message } from "@/components/message";
-import { formatDate } from "@/components/report-card";
 import { ReportDetailActions } from "@/components/report-detail-actions";
 import { ReportStatusBadge } from "@/components/report-status";
+import { getLocale, localizePath } from "@/i18n/config";
+import { formatDateForLocale, getMessages } from "@/i18n/server";
 import { publicPulseApi } from "@/services/api";
 import { ApiError, type ReportResponse } from "@/types/api";
 
 type ReportDetailPageProps = {
   params: Promise<{
+    locale: string;
     id: string;
   }>;
 };
 
 export default async function ReportDetailPage({ params }: ReportDetailPageProps) {
-  const { id } = await params;
-  const result = await getReportPageResult(id);
+  const { id, locale: requestedLocale } = await params;
+  const locale = getLocale(requestedLocale);
+  const messages = getMessages(locale);
+  const result = await getReportPageResult(id, messages.reportDetail.loadError);
 
   if (result.kind === "not-found") {
     notFound();
@@ -35,9 +39,9 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
     <main className="mx-auto w-full max-w-5xl px-6 py-10 lg:px-10">
       <Link
         className="text-sm font-semibold text-[#1f6f4a] underline-offset-4 hover:underline"
-        href="/reports"
+        href={localizePath("/reports", locale)}
       >
-        Back to reports
+        {messages.reportDetail.back}
       </Link>
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
         <article className="rounded-md border border-[#d6ded3] bg-white p-6 shadow-sm">
@@ -56,12 +60,19 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
             {report.description}
           </p>
           <dl className="mt-8 grid gap-4 border-t border-[#e1e7de] pt-6 sm:grid-cols-2">
-            <Detail label="County" value={report.county} />
-            <Detail label="Road name" value={report.roadName} />
-            <Detail label="Created" value={formatDate(report.createdAtUtc)} />
+            <Detail label={messages.reportDetail.county} value={report.county} />
+            <Detail label={messages.reportDetail.roadName} value={report.roadName} />
             <Detail
-              label="Updated"
-              value={report.updatedAtUtc ? formatDate(report.updatedAtUtc) : "Not updated"}
+              label={messages.reportDetail.created}
+              value={formatDateForLocale(report.createdAtUtc, locale)}
+            />
+            <Detail
+              label={messages.reportDetail.updated}
+              value={
+                report.updatedAtUtc
+                  ? formatDateForLocale(report.updatedAtUtc, locale)
+                  : messages.reportDetail.notUpdated
+              }
             />
           </dl>
           <a
@@ -70,7 +81,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
             rel="noreferrer"
             target="_blank"
           >
-            Open photo URL
+            {messages.reportDetail.openPhoto}
           </a>
         </article>
         <aside className="grid content-start gap-6">
@@ -83,6 +94,7 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
 
 async function getReportPageResult(
   id: string,
+  fallbackError: string,
 ): Promise<
   | { kind: "success"; report: ReportResponse }
   | { kind: "error"; error: string }
@@ -100,7 +112,7 @@ async function getReportPageResult(
       error:
         caughtError instanceof ApiError
           ? caughtError.message
-          : "Unable to load this report.",
+          : fallbackError,
     };
   }
 }

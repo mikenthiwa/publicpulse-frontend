@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AuthForm } from "@/components/auth-form";
+import { I18nProvider } from "@/i18n/client";
+import type { Locale } from "@/i18n/config";
+import { messages } from "@/i18n/messages";
 
 const mocks = vi.hoisted(() => ({
   login: vi.fn(),
@@ -34,11 +37,20 @@ describe("AuthForm", () => {
   });
 
   it("validates required fields before login", () => {
-    render(<AuthForm mode="login" />);
+    renderAuthForm("login");
 
     fireEvent.submit(screen.getByRole("button", { name: "Log in" }).closest("form")!);
 
     expect(screen.getByText("Enter an email and password.")).toBeInTheDocument();
+    expect(mocks.login).not.toHaveBeenCalled();
+  });
+
+  it("validates required fields before login in Swahili", () => {
+    renderAuthForm("login", "sw");
+
+    fireEvent.submit(screen.getByRole("button", { name: "Ingia" }).closest("form")!);
+
+    expect(screen.getByText("Weka barua pepe na nenosiri.")).toBeInTheDocument();
     expect(mocks.login).not.toHaveBeenCalled();
   });
 
@@ -53,7 +65,7 @@ describe("AuthForm", () => {
 
     mocks.login.mockResolvedValue(auth);
 
-    render(<AuthForm mode="login" />);
+    renderAuthForm("login");
 
     await user.type(screen.getByLabelText("Email"), " citizen@example.com ");
     await user.type(screen.getByLabelText("Password"), "password123");
@@ -66,7 +78,7 @@ describe("AuthForm", () => {
       });
     });
     expect(mocks.storeAuth).toHaveBeenCalledWith(auth);
-    expect(mocks.push).toHaveBeenCalledWith("/reports");
+    expect(mocks.push).toHaveBeenCalledWith("/en/reports");
     expect(mocks.refresh).toHaveBeenCalled();
   });
 
@@ -81,7 +93,7 @@ describe("AuthForm", () => {
 
     mocks.register.mockResolvedValue(auth);
 
-    render(<AuthForm mode="register" />);
+    renderAuthForm("register");
 
     await user.type(screen.getByLabelText("Email"), "new@example.com");
     await user.type(screen.getByLabelText("Password"), "password123");
@@ -96,3 +108,11 @@ describe("AuthForm", () => {
     expect(mocks.storeAuth).toHaveBeenCalledWith(auth);
   });
 });
+
+function renderAuthForm(mode: "login" | "register", locale: Locale = "en") {
+  return render(
+    <I18nProvider locale={locale} messages={messages[locale]}>
+      <AuthForm mode={mode} />
+    </I18nProvider>,
+  );
+}

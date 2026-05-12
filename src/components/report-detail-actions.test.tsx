@@ -1,6 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ReportDetailActions } from "@/components/report-detail-actions";
+import { I18nProvider } from "@/i18n/client";
+import type { Locale } from "@/i18n/config";
+import { messages } from "@/i18n/messages";
 import type { AuthResponse, ReportResponse } from "@/types/api";
 
 const mocks = vi.hoisted(() => ({
@@ -58,7 +61,7 @@ describe("ReportDetailActions", () => {
       confirmationCount: 3,
     });
 
-    render(<ReportDetailActions report={report} />);
+    renderReportDetailActions();
 
     expect(screen.getByText("2")).toBeInTheDocument();
 
@@ -80,7 +83,7 @@ describe("ReportDetailActions", () => {
       status: 2,
     });
 
-    render(<ReportDetailActions report={report} />);
+    renderReportDetailActions();
 
     const resolvedButton = await screen.findByRole("button", { name: "Resolved" });
 
@@ -92,8 +95,25 @@ describe("ReportDetailActions", () => {
     expect(screen.getByText("Report status updated.")).toBeInTheDocument();
   });
 
+  it("confirms a report with Swahili labels and messages", async () => {
+    const user = userEvent.setup();
+    mocks.confirmReport.mockResolvedValue({
+      reportId: report.id,
+      confirmationCount: 3,
+    });
+
+    renderReportDetailActions("sw");
+
+    await user.click(screen.getByRole("button", { name: "Thibitisha tatizo" }));
+
+    await waitFor(() => {
+      expect(mocks.confirmReport).toHaveBeenCalledWith(report.id);
+    });
+    expect(screen.getByText("Ripoti imethibitishwa.")).toBeInTheDocument();
+  });
+
   it("hides status controls when the report is not locally owned", async () => {
-    render(<ReportDetailActions report={report} />);
+    renderReportDetailActions();
 
     await waitFor(() => {
       expect(mocks.isOwnedReport).not.toHaveBeenCalled();
@@ -101,3 +121,11 @@ describe("ReportDetailActions", () => {
     expect(screen.queryByText("Update status")).not.toBeInTheDocument();
   });
 });
+
+function renderReportDetailActions(locale: Locale = "en") {
+  return render(
+    <I18nProvider locale={locale} messages={messages[locale]}>
+      <ReportDetailActions report={report} />
+    </I18nProvider>,
+  );
+}

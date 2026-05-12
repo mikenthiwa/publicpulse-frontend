@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Message } from "@/components/message";
-import { getStatusLabel } from "@/components/report-status";
+import { useI18n } from "@/i18n/client";
 import { publicPulseApi } from "@/services/api";
 import { getStoredAuth, isOwnedReport } from "@/services/auth-storage";
 import { ApiError, type ReportResponse, type ReportStatus } from "@/types/api";
@@ -14,6 +14,7 @@ type ReportDetailActionsProps = {
 };
 
 export function ReportDetailActions({ report }: ReportDetailActionsProps) {
+  const { getStatusLabel: getLocalizedStatusLabel, messages } = useI18n();
   const [confirmationCount, setConfirmationCount] = useState(report.confirmationCount);
   const [status, setStatus] = useState<ReportStatus>(report.status);
   const [message, setMessage] = useState("");
@@ -39,13 +40,13 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
       const confirmation = await publicPulseApi.confirmReport(report.id);
       setConfirmationCount(confirmation.confirmationCount);
       setMessageTone("success");
-      setMessage("Report confirmed.");
+      setMessage(messages.reportActions.confirmed);
     } catch (caughtError) {
       setMessageTone("error");
       setMessage(
         caughtError instanceof ApiError
           ? caughtError.message
-          : "Unable to confirm the report.",
+          : messages.reportActions.confirmError,
       );
     } finally {
       setIsConfirming(false);
@@ -57,7 +58,7 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
 
     if (!auth) {
       setMessageTone("error");
-      setMessage("Log in to update report status.");
+      setMessage(messages.reportActions.loginToUpdate);
       setCanUpdateStatus(false);
       return;
     }
@@ -73,13 +74,13 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
       );
       setStatus(updatedReport.status);
       setMessageTone("success");
-      setMessage("Report status updated.");
+      setMessage(messages.reportActions.statusUpdated);
     } catch (caughtError) {
       setMessageTone("error");
       setMessage(
         caughtError instanceof ApiError
           ? caughtError.message
-          : "Unable to update report status.",
+          : messages.reportActions.statusError,
       );
     } finally {
       setIsUpdatingStatus(false);
@@ -92,7 +93,9 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
       <div className="rounded-md border border-[#d6ded3] bg-white p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-[#405246]">Confirmations</p>
+            <p className="text-sm font-semibold text-[#405246]">
+              {messages.reportActions.confirmations}
+            </p>
             <p className="mt-1 text-3xl font-semibold text-[#172019]">{confirmationCount}</p>
           </div>
           <button
@@ -101,13 +104,17 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
             disabled={isConfirming}
             onClick={handleConfirm}
           >
-            {isConfirming ? "Confirming..." : "Confirm issue"}
+            {isConfirming
+              ? messages.reportActions.confirming
+              : messages.reportActions.confirmIssue}
           </button>
         </div>
       </div>
       {canUpdateStatus ? (
         <div className="rounded-md border border-[#d6ded3] bg-white p-5">
-          <p className="text-sm font-semibold text-[#405246]">Update status</p>
+          <p className="text-sm font-semibold text-[#405246]">
+            {messages.reportActions.updateStatus}
+          </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {statusOptions.map((option) => (
               <button
@@ -121,7 +128,7 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
                 disabled={isUpdatingStatus || status === option}
                 onClick={() => handleStatusChange(option)}
               >
-                {getStatusLabel(option)}
+                {getLocalizedStatusLabel(option)}
               </button>
             ))}
           </div>
