@@ -6,6 +6,8 @@ import type {
   CreateReportRequest,
   LoginRequest,
   RegisterRequest,
+  RequestReportImageUploadRequest,
+  RequestReportImageUploadResponse,
   ReportListItemResponse,
   ReportResponse,
   ReportStatus,
@@ -85,6 +87,34 @@ function messageForStatus(status: number) {
   return "Something went wrong. Try again.";
 }
 
+async function uploadFile(
+  uploadUrl: string,
+  file: File,
+  uploadHeaders: Record<string, string> = {},
+) {
+  const headers = new Headers(uploadHeaders);
+
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", file.type);
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers,
+      body: file,
+    });
+  } catch {
+    throw new ApiError("Unable to upload the report image.", 0);
+  }
+
+  if (!response.ok) {
+    throw new ApiError("Unable to upload the report image.", response.status);
+  }
+}
+
 function getRequestUrl(path: string) {
   if (typeof window === "undefined") {
     return `${apiBaseUrl}${path}`;
@@ -121,6 +151,25 @@ export const publicPulseApi = {
       body: requestBody,
       token,
     });
+  },
+  requestReportImageUpload(
+    requestBody: RequestReportImageUploadRequest,
+    token: string,
+  ) {
+    return request<RequestReportImageUploadResponse>(
+      "/api/Reports/images/upload-url",
+      {
+        method: "POST",
+        body: requestBody,
+        token,
+      },
+    );
+  },
+  uploadReportImage(
+    upload: RequestReportImageUploadResponse,
+    file: File,
+  ) {
+    return uploadFile(upload.uploadUrl, file, upload.headers);
   },
   confirmReport(id: string) {
     return request<ConfirmReportResponse>(`/api/Reports/${id}/confirmations`, {

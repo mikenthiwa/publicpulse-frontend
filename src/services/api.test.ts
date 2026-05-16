@@ -81,6 +81,86 @@ describe("publicPulseApi", () => {
     expect(headers.get("Content-Type")).toBe("application/json");
   });
 
+  it("requests signed report image upload URLs", async () => {
+    const upload = {
+      uploadUrl: "https://storage.example.com/report-1",
+      imageUrl: "https://cdn.example.com/report-1.jpg",
+      imageKey: "reports/report-1.jpg",
+      headers: {
+        "x-storage-token": "token",
+      },
+    };
+
+    mockFetchResponse(200, {
+      success: true,
+      message: "Upload URL created.",
+      data: upload,
+    });
+
+    await expect(
+      publicPulseApi.requestReportImageUpload(
+        {
+          fileName: "road.jpg",
+          contentType: "image/jpeg",
+          contentLength: 1234,
+        },
+        "token-1",
+      ),
+    ).resolves.toEqual(upload);
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    const headers = options?.headers as Headers;
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/publicpulse/api/Reports/images/upload-url",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          fileName: "road.jpg",
+          contentType: "image/jpeg",
+          contentLength: 1234,
+        }),
+      }),
+    );
+    expect(headers.get("Authorization")).toBe("Bearer token-1");
+    expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("uploads report images directly to object storage", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(null, {
+        status: 204,
+      }),
+    );
+
+    const file = new File(["image"], "road.jpg", { type: "image/jpeg" });
+
+    await publicPulseApi.uploadReportImage(
+      {
+        uploadUrl: "https://storage.example.com/report-1",
+        imageUrl: "https://cdn.example.com/report-1.jpg",
+        imageKey: "reports/report-1.jpg",
+        headers: {
+          "x-storage-token": "token",
+        },
+      },
+      file,
+    );
+
+    const [, options] = vi.mocked(fetch).mock.calls[0];
+    const headers = options?.headers as Headers;
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://storage.example.com/report-1",
+      expect.objectContaining({
+        method: "PUT",
+        body: file,
+      }),
+    );
+    expect(headers.get("Content-Type")).toBe("image/jpeg");
+    expect(headers.get("x-storage-token")).toBe("token");
+  });
+
   it("throws ApiError with backend messages", async () => {
     mockFetchResponse(403, {
       success: false,

@@ -35,6 +35,19 @@ export type CreateReportRequest = {
   roadName: string;
 };
 
+export type RequestReportImageUploadRequest = {
+  fileName: string;
+  contentType: string;
+  contentLength: number;
+};
+
+export type RequestReportImageUploadResponse = {
+  uploadUrl: string;
+  imageUrl: string;
+  imageKey: string;
+  headers?: Record<string, string>;
+};
+
 export type UpdateReportStatusRequest = {
   status: ReportStatus;
 };

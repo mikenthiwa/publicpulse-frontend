@@ -12,7 +12,7 @@ type FormState = {
   title: string;
   description: string;
   categoryId: string;
-  photoUrl: string;
+  photoFile: File | null;
   county: string;
   roadName: string;
 };
@@ -21,10 +21,13 @@ const initialFormState: FormState = {
   title: "",
   description: "",
   categoryId: "",
-  photoUrl: "",
+  photoFile: null,
   county: "",
   roadName: "",
 };
+
+const acceptedImageTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const maxImageSizeBytes = 5 * 1024 * 1024;
 
 export function ReportForm() {
   const router = useRouter();
@@ -37,6 +40,8 @@ export function ReportForm() {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
+  const [submitLabel, setSubmitLabel] = useState<string>(messages.reportForm.submit);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -87,6 +92,12 @@ export function ReportForm() {
     };
   }, [auth, hasCheckedAuth, loadCategoriesError]);
 
+  useEffect(() => {
+    return () => {
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    };
+  }, [imagePreviewUrl]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -95,7 +106,6 @@ export function ReportForm() {
       title: form.title.trim(),
       description: form.description.trim(),
       categoryId: form.categoryId,
-      photoUrl: form.photoUrl.trim(),
       county: form.county.trim(),
       roadName: form.roadName.trim(),
     };
@@ -105,15 +115,39 @@ export function ReportForm() {
       return;
     }
 
+    if (!form.photoFile) {
+      setError(messages.reportForm.imageRequired);
+      return;
+    }
+
     if (!auth) {
       setError(messages.reportForm.loginToCreate);
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitLabel(messages.reportForm.uploading);
 
     try {
-      const createdReport = await publicPulseApi.createReport(trimmedForm, auth.token);
+      const imageUpload = await publicPulseApi.requestReportImageUpload(
+        {
+          fileName: form.photoFile.name,
+          contentType: form.photoFile.type,
+          contentLength: form.photoFile.size,
+        },
+        auth.token,
+      );
+
+      await publicPulseApi.uploadReportImage(imageUpload, form.photoFile);
+      setSubmitLabel(messages.reportForm.submitting);
+
+      const createdReport = await publicPulseApi.createReport(
+        {
+          ...trimmedForm,
+          photoUrl: imageUpload.imageUrl,
+        },
+        auth.token,
+      );
       addOwnedReport(auth.userId, createdReport.id);
       router.push(href(`/reports/${createdReport.id}`));
       router.refresh();
@@ -125,7 +159,40 @@ export function ReportForm() {
       );
     } finally {
       setIsSubmitting(false);
+      setSubmitLabel(messages.reportForm.submit);
     }
+  }
+
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+      setImagePreviewUrl("");
+    }
+
+    if (!file) {
+      setForm({ ...form, photoFile: null });
+      return;
+    }
+
+    if (!acceptedImageTypes.includes(file.type)) {
+      setError(messages.reportForm.imageTypeError);
+      setForm({ ...form, photoFile: null });
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > maxImageSizeBytes) {
+      setError(messages.reportForm.imageSizeError);
+      setForm({ ...form, photoFile: null });
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setForm({ ...form, photoFile: file });
+    setImagePreviewUrl(URL.createObjectURL(file));
   }
 
   if (!hasCheckedAuth) {
@@ -178,14 +245,33 @@ export function ReportForm() {
           ))}
         </select>
       </label>
-      <Field
-        label={messages.reportForm.photoUrl}
-        placeholder={messages.reportForm.photoPlaceholder}
-        type="url"
-        value={form.photoUrl}
-        onChange={(value) => setForm({ ...form, photoUrl: value })}
-        required
-      />
+      <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
+        {messages.reportForm.photo}
+        <input
+          aria-label={messages.reportForm.photo}
+          accept={acceptedImageTypes.join(",")}
+          className="rounded-md border border-[#b7c7bb] bg-white px-3 py-2 font-normal outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-[#e5efe8] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-[#1f6f4a] focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
+          onChange={handlePhotoChange}
+          required
+          type="file"
+        />
+        <span className="text-xs font-normal text-[#5f7168]">
+          {messages.reportForm.photoHelp}
+        </span>
+        {form.photoFile ? (
+          <span className="text-xs font-normal text-[#3f5148]">
+            {messages.reportForm.selectedPhoto}: {form.photoFile.name}
+          </span>
+        ) : null}
+        {imagePreviewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt=""
+            className="h-40 w-full rounded-md border border-[#d6e1d9] object-cover"
+            src={imagePreviewUrl}
+          />
+        ) : null}
+      </label>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
           label={messages.reportForm.county}
@@ -205,7 +291,7 @@ export function ReportForm() {
         type="submit"
         disabled={isSubmitting || isLoadingCategories || categories.length === 0}
       >
-        {isSubmitting ? messages.reportForm.submitting : messages.reportForm.submit}
+        {isSubmitting ? submitLabel : messages.reportForm.submit}
       </button>
     </form>
   );
