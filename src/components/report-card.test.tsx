@@ -14,7 +14,7 @@ const report: ReportListItemResponse = {
   roadName: "Market Road",
   status: 1,
   confirmationCount: 7,
-  createdAtUtc: "2026-05-10T10:00:00Z",
+  created: "2026-05-10T10:00:00Z",
 };
 
 describe("ReportCard", () => {
@@ -26,6 +26,7 @@ describe("ReportCard", () => {
     expect(screen.getByText("Market Road, Nairobi")).toBeInTheDocument();
     expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.getByText("7")).toBeInTheDocument();
+    expect(screen.getByText("May 10, 2026")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View details" })).toHaveAttribute(
       "href",
       "/en/reports/report-1",

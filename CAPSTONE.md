@@ -86,9 +86,9 @@ Important backend models for frontend typing:
 - `CreateReportRequest`: `title`, `description`, `categoryId`, `photoUrl`,
   `county`, `roadName`
 - `ReportListItemResponse`: `id`, `title`, `categoryId`, `categoryName`,
-  `county`, `roadName`, `status`, `confirmationCount`, `createdAtUtc`
+  `county`, `roadName`, `status`, `confirmationCount`, `created`
 - `ReportResponse`: list item fields plus `description`, `photoUrl`, and
-  `updatedAtUtc`
+  `lastModified`
 - `ConfirmReportResponse`: `reportId`, `confirmationCount`
 - `ReportStatus`: `Reported`, `InProgress`, `Resolved`
 

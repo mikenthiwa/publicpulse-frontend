@@ -61,13 +61,13 @@ export type ReportListItemResponse = {
   roadName: string;
   status: ReportStatus;
   confirmationCount: number;
-  createdAtUtc: string;
+  created: string;
 };
 
 export type ReportResponse = ReportListItemResponse & {
   description: string;
   photoUrl: string;
-  updatedAtUtc: string | null;
+  lastModified: string | null;
 };
 
 export type ConfirmReportResponse = {

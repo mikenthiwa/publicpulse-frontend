@@ -43,8 +43,8 @@ const report: ReportResponse = {
   roadName: "Main Road",
   status: 0,
   confirmationCount: 2,
-  createdAtUtc: "2026-05-10T10:00:00Z",
-  updatedAtUtc: null,
+  created: "2026-05-10T10:00:00Z",
+  lastModified: null,
 };
 
 describe("ReportDetailActions", () => {

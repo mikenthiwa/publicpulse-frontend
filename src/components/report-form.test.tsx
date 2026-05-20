@@ -75,8 +75,8 @@ describe("ReportForm", () => {
       roadName: "Main Road",
       status: 0,
       confirmationCount: 0,
-      createdAtUtc: "2026-05-12T10:00:00Z",
-      updatedAtUtc: null,
+      created: "2026-05-12T10:00:00Z",
+      lastModified: null,
     });
     vi.stubGlobal("URL", {
       createObjectURL: vi.fn(() => "blob:preview"),

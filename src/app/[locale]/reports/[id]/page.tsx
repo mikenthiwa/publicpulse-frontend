@@ -64,13 +64,13 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
             <Detail label={messages.reportDetail.roadName} value={report.roadName} />
             <Detail
               label={messages.reportDetail.created}
-              value={formatDateForLocale(report.createdAtUtc, locale)}
+              value={formatDateForLocale(report.created, locale)}
             />
             <Detail
               label={messages.reportDetail.updated}
               value={
-                report.updatedAtUtc
-                  ? formatDateForLocale(report.updatedAtUtc, locale)
+                report.lastModified
+                  ? formatDateForLocale(report.lastModified, locale)
                   : messages.reportDetail.notUpdated
               }
             />

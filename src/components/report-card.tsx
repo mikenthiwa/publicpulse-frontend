@@ -33,7 +33,7 @@ export function ReportCard({ report }: { report: ReportListItemResponse }) {
           </div>
           <div className="text-right">
             <dt className="font-semibold text-[#405246]">{messages.reportCard.created}</dt>
-            <dd>{formatDate(report.createdAtUtc)}</dd>
+            <dd>{formatDate(report.created)}</dd>
           </div>
         </div>
       </dl>
