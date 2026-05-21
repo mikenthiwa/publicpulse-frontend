@@ -27,7 +27,6 @@ export type CategoryResponse = {
 export type ReportStatus = "Reported" | "InProgress" | "Resolved" | 0 | 1 | 2;
 
 export type CreateReportRequest = {
-  title: string;
   description: string;
   categoryId: string;
   photoUrl: string;
@@ -54,7 +53,6 @@ export type UpdateReportStatusRequest = {
 
 export type ReportListItemResponse = {
   id: string;
-  title: string;
   categoryId: string;
   categoryName: string;
   county: string;

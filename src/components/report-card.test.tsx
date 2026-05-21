@@ -7,7 +7,6 @@ import type { ReportListItemResponse } from "@/types/api";
 
 const report: ReportListItemResponse = {
   id: "report-1",
-  title: "Blocked drainage near market",
   categoryId: "category-1",
   categoryName: "Drainage",
   county: "Nairobi",
@@ -21,8 +20,7 @@ describe("ReportCard", () => {
   it("renders report summary and details link", () => {
     renderReportCard();
 
-    expect(screen.getByRole("heading", { name: report.title })).toBeInTheDocument();
-    expect(screen.getByText("Drainage")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Drainage" })).toBeInTheDocument();
     expect(screen.getByText("Market Road, Nairobi")).toBeInTheDocument();
     expect(screen.getByText("In progress")).toBeInTheDocument();
     expect(screen.getByText("7")).toBeInTheDocument();

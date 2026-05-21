@@ -34,7 +34,6 @@ const auth: AuthResponse = {
 
 const report: ReportResponse = {
   id: "report-1",
-  title: "Pothole on main road",
   description: "Large pothole near the junction.",
   categoryId: "category-1",
   categoryName: "Road damage",

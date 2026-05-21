@@ -66,7 +66,6 @@ describe("ReportForm", () => {
     mocks.uploadReportImage.mockResolvedValue(undefined);
     mocks.createReport.mockResolvedValue({
       id: "report-1",
-      title: "Pothole",
       description: "Large pothole.",
       categoryId: category.id,
       categoryName: category.name,
@@ -153,7 +152,6 @@ describe("ReportForm", () => {
     expect(mocks.uploadReportImage).toHaveBeenCalledWith(upload, file);
     expect(mocks.createReport).toHaveBeenCalledWith(
       {
-        title: "Pothole",
         description: "Large pothole near the junction.",
         categoryId: category.id,
         photoUrl: upload.imageUrl,
@@ -191,7 +189,6 @@ async function fillReportFields() {
   const user = userEvent.setup();
 
   await screen.findByRole("option", { name: category.name });
-  await user.type(screen.getByLabelText("Title"), " Pothole ");
   await user.type(
     screen.getByLabelText("Description"),
     " Large pothole near the junction. ",

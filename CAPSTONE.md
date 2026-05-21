@@ -83,10 +83,10 @@ Important backend models for frontend typing:
 - `LoginRequest`: `email`, `password`
 - `AuthResponse`: `userId`, `email`, `token`, `expiresAtUtc`
 - `CategoryResponse`: `id`, `name`, `description`
-- `CreateReportRequest`: `title`, `description`, `categoryId`, `photoUrl`,
-  `county`, `roadName`
-- `ReportListItemResponse`: `id`, `title`, `categoryId`, `categoryName`,
-  `county`, `roadName`, `status`, `confirmationCount`, `created`
+- `CreateReportRequest`: `description`, `categoryId`, `photoUrl`, `county`,
+  `roadName`
+- `ReportListItemResponse`: `id`, `categoryId`, `categoryName`, `county`,
+  `roadName`, `status`, `confirmationCount`, `created`
 - `ReportResponse`: list item fields plus `description`, `photoUrl`, and
   `lastModified`
 - `ConfirmReportResponse`: `reportId`, `confirmationCount`

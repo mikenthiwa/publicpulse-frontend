@@ -9,7 +9,6 @@ import { addOwnedReport, getStoredAuth } from "@/services/auth-storage";
 import { ApiError, type AuthResponse, type CategoryResponse } from "@/types/api";
 
 type FormState = {
-  title: string;
   description: string;
   categoryId: string;
   photoFile: File | null;
@@ -18,7 +17,6 @@ type FormState = {
 };
 
 const initialFormState: FormState = {
-  title: "",
   description: "",
   categoryId: "",
   photoFile: null,
@@ -103,7 +101,6 @@ export function ReportForm() {
     setError("");
 
     const trimmedForm = {
-      title: form.title.trim(),
       description: form.description.trim(),
       categoryId: form.categoryId,
       county: form.county.trim(),
@@ -210,41 +207,6 @@ export function ReportForm() {
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
       {error ? <Message tone="error">{error}</Message> : null}
-      <Field
-        label={messages.reportForm.title}
-        value={form.title}
-        onChange={(value) => setForm({ ...form, title: value })}
-        required
-      />
-      <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
-        {messages.reportForm.description}
-        <textarea
-          className="min-h-32 rounded-md border border-[#b7c7bb] bg-white px-3 py-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
-          value={form.description}
-          onChange={(event) => setForm({ ...form, description: event.target.value })}
-          required
-        />
-      </label>
-      <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
-        {messages.reportForm.category}
-        <select
-          className="h-11 rounded-md border border-[#b7c7bb] bg-white px-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
-          value={form.categoryId}
-          onChange={(event) => setForm({ ...form, categoryId: event.target.value })}
-          disabled={isLoadingCategories || categories.length === 0}
-          required
-        >
-          {isLoadingCategories ? <option>{messages.reportForm.loadingCategories}</option> : null}
-          {!isLoadingCategories && categories.length === 0 ? (
-            <option>{messages.reportForm.noCategories}</option>
-          ) : null}
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </label>
       <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
         {messages.reportForm.photo}
         <input
@@ -272,6 +234,26 @@ export function ReportForm() {
           />
         ) : null}
       </label>
+      <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
+        {messages.reportForm.category}
+        <select
+          className="h-11 rounded-md border border-[#b7c7bb] bg-white px-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
+          value={form.categoryId}
+          onChange={(event) => setForm({ ...form, categoryId: event.target.value })}
+          disabled={isLoadingCategories || categories.length === 0}
+          required
+        >
+          {isLoadingCategories ? <option>{messages.reportForm.loadingCategories}</option> : null}
+          {!isLoadingCategories && categories.length === 0 ? (
+            <option>{messages.reportForm.noCategories}</option>
+          ) : null}
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
           label={messages.reportForm.county}
@@ -286,6 +268,15 @@ export function ReportForm() {
           required
         />
       </div>
+      <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
+        {messages.reportForm.description}
+        <textarea
+          className="min-h-32 rounded-md border border-[#b7c7bb] bg-white px-3 py-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
+          value={form.description}
+          onChange={(event) => setForm({ ...form, description: event.target.value })}
+          required
+        />
+      </label>
       <button
         className="inline-flex h-11 items-center justify-center rounded-md bg-[#1f6f4a] px-5 text-sm font-semibold text-white transition hover:bg-[#185a3c] disabled:cursor-not-allowed disabled:bg-[#8caf9a]"
         type="submit"

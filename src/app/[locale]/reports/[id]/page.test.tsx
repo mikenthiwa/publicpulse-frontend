@@ -27,7 +27,6 @@ vi.mock("next/navigation", () => ({
 
 const report: ReportResponse = {
   id: "report-1",
-  title: "Pothole on main road",
   description: "Large pothole near the junction.",
   categoryId: "category-1",
   categoryName: "Road damage",
@@ -49,6 +48,8 @@ describe("ReportDetailPage", () => {
   it("renders created and last-modified timestamps from the report audit fields", async () => {
     await renderReportDetailPage();
 
+    expect(screen.getByRole("heading", { name: "Road damage" })).toBeInTheDocument();
+    expect(screen.getByText("Large pothole near the junction.")).toBeInTheDocument();
     expect(screen.getByText("Created")).toBeInTheDocument();
     expect(screen.getByText("May 10, 2026")).toBeInTheDocument();
     expect(screen.getByText("Updated")).toBeInTheDocument();

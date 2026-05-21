@@ -3,7 +3,6 @@ import { ApiError, type ReportResponse } from "@/types/api";
 
 const report: ReportResponse = {
   id: "report-1",
-  title: "Pothole on main road",
   description: "Large pothole near the junction.",
   categoryId: "category-1",
   categoryName: "Road damage",
@@ -51,7 +50,6 @@ describe("publicPulseApi", () => {
 
     await publicPulseApi.createReport(
       {
-        title: report.title,
         description: report.description,
         categoryId: report.categoryId,
         photoUrl: report.photoUrl,
@@ -68,7 +66,6 @@ describe("publicPulseApi", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          title: report.title,
           description: report.description,
           categoryId: report.categoryId,
           photoUrl: report.photoUrl,

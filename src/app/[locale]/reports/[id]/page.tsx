@@ -47,11 +47,8 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
         <article className="rounded-md border border-[#d6ded3] bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-[#2f6f4e]">
+              <h1 className="text-3xl font-semibold leading-tight text-[#172019] sm:text-4xl">
                 {report.categoryName}
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold leading-tight text-[#172019] sm:text-4xl">
-                {report.title}
               </h1>
             </div>
             <ReportStatusBadge status={report.status} />
