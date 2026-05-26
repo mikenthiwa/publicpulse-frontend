@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon } from "@/components/icons";
 import { Message } from "@/components/message";
+import { cardSurface, primaryButton, secondaryButton } from "@/components/ui";
 import { useI18n } from "@/i18n/client";
 import { publicPulseApi } from "@/services/api";
 import { getStoredAuth, isOwnedReport } from "@/services/auth-storage";
@@ -90,20 +92,24 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
   return (
     <div className="grid gap-5">
       {message ? <Message tone={messageTone}>{message}</Message> : null}
-      <div className="rounded-md border border-[#d6ded3] bg-white p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className={`${cardSurface} p-5`}>
+        <div className="flex flex-col gap-4">
           <div>
-            <p className="text-sm font-semibold text-[#405246]">
+            <p className="inline-flex items-center gap-2 text-sm font-bold text-[#39483f]">
+              <Icon name="thumbs-up" size={16} />
               {messages.reportActions.confirmations}
             </p>
-            <p className="mt-1 text-3xl font-semibold text-[#172019]">{confirmationCount}</p>
+            <p className="mt-1 text-4xl font-black text-[#151d19]">
+              {confirmationCount}
+            </p>
           </div>
           <button
-            className="inline-flex h-11 items-center justify-center rounded-md bg-[#1f6f4a] px-5 text-sm font-semibold text-white transition hover:bg-[#185a3c] disabled:cursor-not-allowed disabled:bg-[#8caf9a]"
+            className={primaryButton}
             type="button"
             disabled={isConfirming}
             onClick={handleConfirm}
           >
+            <Icon name="thumbs-up" size={17} />
             {isConfirming
               ? messages.reportActions.confirming
               : messages.reportActions.confirmIssue}
@@ -111,23 +117,34 @@ export function ReportDetailActions({ report }: ReportDetailActionsProps) {
         </div>
       </div>
       {canUpdateStatus ? (
-        <div className="rounded-md border border-[#d6ded3] bg-white p-5">
-          <p className="text-sm font-semibold text-[#405246]">
+        <div className={`${cardSurface} p-5`}>
+          <p className="inline-flex items-center gap-2 text-sm font-bold text-[#39483f]">
+            <Icon name="check-circle" size={16} />
             {messages.reportActions.updateStatus}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {statusOptions.map((option) => (
               <button
-                className={`inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-semibold transition disabled:cursor-not-allowed ${
+                className={`${
                   status === option
-                    ? "border-[#1f6f4a] bg-[#1f6f4a] text-white"
-                    : "border-[#b7c7bb] text-[#26352b] hover:bg-[#f7f8f4]"
-                }`}
+                    ? primaryButton
+                    : secondaryButton
+                } disabled:cursor-not-allowed`}
                 key={String(option)}
                 type="button"
                 disabled={isUpdatingStatus || status === option}
                 onClick={() => handleStatusChange(option)}
               >
+                <Icon
+                  name={
+                    option === 2
+                      ? "check-circle"
+                      : option === 1
+                        ? "info"
+                        : "file-text"
+                  }
+                  size={16}
+                />
                 {getLocalizedStatusLabel(option)}
               </button>
             ))}

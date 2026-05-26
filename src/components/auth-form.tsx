@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Icon } from "@/components/icons";
 import { Message } from "@/components/message";
+import { fieldLabel, inputControl, primaryButton, tertiaryLink } from "@/components/ui";
 import { useI18n } from "@/i18n/client";
 import { publicPulseApi } from "@/services/api";
 import { storeAuth } from "@/services/auth-storage";
@@ -56,20 +58,28 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
       {error ? <Message tone="error">{error}</Message> : null}
-      <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
-        {messages.auth.email}
+      <label className={fieldLabel}>
+        <span className="inline-flex items-center gap-2">
+          <Icon name="mail" size={16} />
+          {messages.auth.email}
+        </span>
         <input
-          className="h-11 rounded-md border border-[#b7c7bb] bg-white px-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
+          autoComplete="email"
+          className={inputControl}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           required
         />
       </label>
-      <label className="grid gap-2 text-sm font-semibold text-[#26352b]">
-        {messages.auth.password}
+      <label className={fieldLabel}>
+        <span className="inline-flex items-center gap-2">
+          <Icon name="lock" size={16} />
+          {messages.auth.password}
+        </span>
         <input
-          className="h-11 rounded-md border border-[#b7c7bb] bg-white px-3 font-normal outline-none transition focus:border-[#1f6f4a] focus:ring-2 focus:ring-[#cfe3d4]"
+          autoComplete={isLogin ? "current-password" : "new-password"}
+          className={inputControl}
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
@@ -77,20 +87,21 @@ export function AuthForm({ mode }: AuthFormProps) {
         />
       </label>
       <button
-        className="inline-flex h-11 items-center justify-center rounded-md bg-[#1f6f4a] px-5 text-sm font-semibold text-white transition hover:bg-[#185a3c] disabled:cursor-not-allowed disabled:bg-[#8caf9a]"
+        className={primaryButton}
         type="submit"
         disabled={isSubmitting}
       >
+        <Icon name={isLogin ? "log-in" : "user-plus"} size={17} />
         {isSubmitting
           ? messages.auth.working
           : isLogin
             ? messages.auth.loginSubmit
             : messages.auth.registerSubmit}
       </button>
-      <p className="text-sm text-[#536257]">
+      <p className="text-sm text-[#4f5f55]">
         {isLogin ? messages.auth.needAccount : messages.auth.haveAccount}{" "}
         <Link
-          className="font-semibold text-[#1f6f4a] underline-offset-4 hover:underline"
+          className={tertiaryLink}
           href={isLogin ? href("/register") : href("/login")}
         >
           {isLogin ? messages.auth.registerLink : messages.auth.loginLink}
