@@ -9,6 +9,13 @@ const report: ReportListItemResponse = {
   id: "report-1",
   categoryId: "category-1",
   categoryName: "Drainage",
+  images: [
+    {
+      id: "image-1",
+      imageUrl: "https://example.com/photo.jpg",
+      publicId: "reports/photo",
+    },
+  ],
   county: "Nairobi",
   roadName: "Market Road",
   status: 1,

@@ -6,7 +6,13 @@ const report: ReportResponse = {
   description: "Large pothole near the junction.",
   categoryId: "category-1",
   categoryName: "Road damage",
-  photoUrl: "https://example.com/photo.jpg",
+  images: [
+    {
+      id: "image-1",
+      imageUrl: "https://example.com/photo.jpg",
+      publicId: "reports/photo",
+    },
+  ],
   county: "Nairobi",
   roadName: "Main Road",
   status: 0,
@@ -52,9 +58,15 @@ describe("publicPulseApi", () => {
       {
         description: report.description,
         categoryId: report.categoryId,
-        photoUrl: report.photoUrl,
         county: report.county,
         roadName: report.roadName,
+        images: [
+          {
+            publicId: report.images[0].publicId,
+            version: "1",
+            signature: "cloudinary-signature",
+          },
+        ],
       },
       "token-1",
     );
@@ -68,9 +80,15 @@ describe("publicPulseApi", () => {
         body: JSON.stringify({
           description: report.description,
           categoryId: report.categoryId,
-          photoUrl: report.photoUrl,
           county: report.county,
           roadName: report.roadName,
+          images: [
+            {
+              publicId: report.images[0].publicId,
+              version: "1",
+              signature: "cloudinary-signature",
+            },
+          ],
         }),
       }),
     );
@@ -78,84 +96,88 @@ describe("publicPulseApi", () => {
     expect(headers.get("Content-Type")).toBe("application/json");
   });
 
-  it("requests signed report image upload URLs", async () => {
+  it("requests signed Cloudinary report image upload params", async () => {
     const upload = {
-      uploadUrl: "https://storage.example.com/report-1",
-      imageUrl: "https://cdn.example.com/report-1.jpg",
-      imageKey: "reports/report-1.jpg",
-      headers: {
-        "x-storage-token": "token",
-      },
+      cloudName: "publicpulse",
+      apiKey: "api-key",
+      timestamp: 1780000000,
+      folder: "reports",
+      uploadPreset: "publicpulse-reports",
+      signature: "upload-signature",
     };
 
     mockFetchResponse(200, {
       success: true,
-      message: "Upload URL created.",
+      message: "Upload signature created.",
       data: upload,
     });
 
     await expect(
-      publicPulseApi.requestReportImageUpload(
-        {
-          fileName: "road.jpg",
-          contentType: "image/jpeg",
-          contentLength: 1234,
-        },
-        "token-1",
-      ),
+      publicPulseApi.requestReportImageUpload("token-1"),
     ).resolves.toEqual(upload);
 
     const [, options] = vi.mocked(fetch).mock.calls[0];
     const headers = options?.headers as Headers;
 
     expect(fetch).toHaveBeenCalledWith(
-      "/api/publicpulse/api/Reports/images/upload-url",
+      "/api/publicpulse/api/Reports/images/upload-signature",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({
-          fileName: "road.jpg",
-          contentType: "image/jpeg",
-          contentLength: 1234,
-        }),
       }),
     );
     expect(headers.get("Authorization")).toBe("Bearer token-1");
-    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(headers.get("Content-Type")).toBeNull();
   });
 
-  it("uploads report images directly to object storage", async () => {
+  it("uploads report images directly to Cloudinary", async () => {
     vi.mocked(fetch).mockResolvedValue(
-      new Response(null, {
-        status: 204,
+      new Response(JSON.stringify({
+        secure_url: "https://res.cloudinary.com/publicpulse/image/upload/v1/reports/road.jpg",
+        public_id: "reports/road",
+        version: 1,
+        signature: "cloudinary-response-signature",
+      }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
       }),
     );
 
     const file = new File(["image"], "road.jpg", { type: "image/jpeg" });
 
-    await publicPulseApi.uploadReportImage(
+    await expect(publicPulseApi.uploadReportImage(
       {
-        uploadUrl: "https://storage.example.com/report-1",
-        imageUrl: "https://cdn.example.com/report-1.jpg",
-        imageKey: "reports/report-1.jpg",
-        headers: {
-          "x-storage-token": "token",
-        },
+        cloudName: "publicpulse",
+        apiKey: "api-key",
+        timestamp: 1780000000,
+        folder: "reports",
+        uploadPreset: "publicpulse-reports",
+        signature: "upload-signature",
       },
       file,
-    );
+    )).resolves.toEqual({
+      public_id: "reports/road",
+      version: 1,
+      signature: "cloudinary-response-signature",
+    });
 
     const [, options] = vi.mocked(fetch).mock.calls[0];
-    const headers = options?.headers as Headers;
+    const body = options?.body as FormData;
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://storage.example.com/report-1",
+      "https://api.cloudinary.com/v1_1/publicpulse/image/upload",
       expect.objectContaining({
-        method: "PUT",
-        body: file,
+        method: "POST",
+        body,
       }),
     );
-    expect(headers.get("Content-Type")).toBe("image/jpeg");
-    expect(headers.get("x-storage-token")).toBe("token");
+    expect(body.get("file")).toBe(file);
+    expect(body.get("api_key")).toBe("api-key");
+    expect(body.get("timestamp")).toBe("1780000000");
+    expect(body.get("folder")).toBe("reports");
+    expect(body.get("upload_preset")).toBe("publicpulse-reports");
+    expect(body.get("signature")).toBe("upload-signature");
   });
 
   it("throws ApiError with backend messages", async () => {

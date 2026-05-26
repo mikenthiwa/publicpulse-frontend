@@ -30,7 +30,13 @@ const report: ReportResponse = {
   description: "Large pothole near the junction.",
   categoryId: "category-1",
   categoryName: "Road damage",
-  photoUrl: "https://example.com/photo.jpg",
+  images: [
+    {
+      id: "image-1",
+      imageUrl: "https://example.com/photo.jpg",
+      publicId: "reports/photo",
+    },
+  ],
   county: "Nairobi",
   roadName: "Main Road",
   status: 0,
@@ -54,6 +60,10 @@ describe("ReportDetailPage", () => {
     expect(screen.getByText("May 10, 2026")).toBeInTheDocument();
     expect(screen.getByText("Updated")).toBeInTheDocument();
     expect(screen.getByText("May 11, 2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open image URL" })).toHaveAttribute(
+      "href",
+      "https://example.com/photo.jpg",
+    );
   });
 
   it("renders the existing not-updated fallback when lastModified is null", async () => {

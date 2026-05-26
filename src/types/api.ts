@@ -29,22 +29,30 @@ export type ReportStatus = "Reported" | "InProgress" | "Resolved" | 0 | 1 | 2;
 export type CreateReportRequest = {
   description: string;
   categoryId: string;
-  photoUrl: string;
   county: string;
   roadName: string;
+  images: CreateReportImageRequest[];
 };
 
-export type RequestReportImageUploadRequest = {
-  fileName: string;
-  contentType: string;
-  contentLength: number;
+export type CreateReportImageRequest = {
+  publicId: string;
+  version: string;
+  signature: string;
 };
 
 export type RequestReportImageUploadResponse = {
-  uploadUrl: string;
-  imageUrl: string;
-  imageKey: string;
-  headers?: Record<string, string>;
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: string;
+  uploadPreset: string;
+  signature: string;
+};
+
+export type CloudinaryUploadResponse = {
+  public_id: string;
+  version: number;
+  signature: string;
 };
 
 export type UpdateReportStatusRequest = {
@@ -55,6 +63,7 @@ export type ReportListItemResponse = {
   id: string;
   categoryId: string;
   categoryName: string;
+  images: ReportImageResponse[];
   county: string;
   roadName: string;
   status: ReportStatus;
@@ -62,9 +71,14 @@ export type ReportListItemResponse = {
   created: string;
 };
 
+export type ReportImageResponse = {
+  id: string;
+  imageUrl: string;
+  publicId: string;
+};
+
 export type ReportResponse = ReportListItemResponse & {
   description: string;
-  photoUrl: string;
   lastModified: string | null;
 };
 

@@ -52,9 +52,19 @@ const category = {
 };
 
 const upload = {
-  uploadUrl: "https://storage.example.com/report-1",
-  imageUrl: "https://cdn.example.com/report-1.jpg",
-  imageKey: "reports/report-1.jpg",
+  cloudName: "publicpulse",
+  apiKey: "api-key",
+  timestamp: 1780000000,
+  folder: "reports",
+  uploadPreset: "publicpulse-reports",
+  signature: "upload-signature",
+};
+
+const cloudinaryImage = {
+  secure_url: "https://res.cloudinary.com/publicpulse/image/upload/v1/reports/road.jpg",
+  public_id: "reports/road",
+  version: 1,
+  signature: "cloudinary-response-signature",
 };
 
 describe("ReportForm", () => {
@@ -63,13 +73,19 @@ describe("ReportForm", () => {
     mocks.getStoredAuth.mockReturnValue(auth);
     mocks.listCategories.mockResolvedValue([category]);
     mocks.requestReportImageUpload.mockResolvedValue(upload);
-    mocks.uploadReportImage.mockResolvedValue(undefined);
+    mocks.uploadReportImage.mockResolvedValue(cloudinaryImage);
     mocks.createReport.mockResolvedValue({
       id: "report-1",
       description: "Large pothole.",
       categoryId: category.id,
       categoryName: category.name,
-      photoUrl: upload.imageUrl,
+      images: [
+        {
+          id: "image-1",
+          imageUrl: cloudinaryImage.secure_url,
+          publicId: cloudinaryImage.public_id,
+        },
+      ],
       county: "Nairobi",
       roadName: "Main Road",
       status: 0,
@@ -93,7 +109,9 @@ describe("ReportForm", () => {
 
     fireEvent.submit(screen.getByRole("button", { name: "Submit report" }).closest("form")!);
 
-    expect(screen.getByText("Add a report photo before submitting.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Add at least one report image before submitting."),
+    ).toBeInTheDocument();
     expect(mocks.requestReportImageUpload).not.toHaveBeenCalled();
     expect(mocks.createReport).not.toHaveBeenCalled();
   });
@@ -105,12 +123,12 @@ describe("ReportForm", () => {
     await screen.findByRole("option", { name: category.name });
 
     await user.upload(
-      screen.getByLabelText("Photo"),
+      screen.getByLabelText("Images"),
       new File(["text"], "notes.txt", { type: "text/plain" }),
     );
 
     expect(screen.getByText("Upload a JPG, PNG, WebP, or GIF image.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Photo")).toHaveValue("");
+    expect(screen.getByLabelText("Images")).toHaveValue("");
   });
 
   it("rejects oversized images", async () => {
@@ -120,43 +138,59 @@ describe("ReportForm", () => {
     await screen.findByRole("option", { name: category.name });
 
     await user.upload(
-      screen.getByLabelText("Photo"),
+      screen.getByLabelText("Images"),
       new File([new Uint8Array(5 * 1024 * 1024 + 1)], "large.jpg", {
         type: "image/jpeg",
       }),
     );
 
     expect(screen.getByText("Upload an image smaller than 5 MB.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Photo")).toHaveValue("");
+    expect(screen.getByLabelText("Images")).toHaveValue("");
   });
 
-  it("uploads the image before creating the report", async () => {
+  it("rejects too many images", async () => {
+    const user = userEvent.setup();
+
+    renderReportForm();
+    await screen.findByRole("option", { name: category.name });
+
+    await user.upload(
+      screen.getByLabelText("Images"),
+      Array.from({ length: 6 }, (_, index) =>
+        new File(["image"], `road-${index}.jpg`, { type: "image/jpeg" }),
+      ),
+    );
+
+    expect(screen.getByText("Upload no more than 5 report images.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Images")).toHaveValue("");
+  });
+
+  it("uploads images before creating the report", async () => {
     const user = userEvent.setup();
     const file = new File(["image"], "road.jpg", { type: "image/jpeg" });
 
     renderReportForm();
     await fillReportFields();
-    await user.upload(screen.getByLabelText("Photo"), file);
+    await user.upload(screen.getByLabelText("Images"), file);
     fireEvent.submit(screen.getByRole("button", { name: "Submit report" }).closest("form")!);
 
     await waitFor(() => {
-      expect(mocks.requestReportImageUpload).toHaveBeenCalledWith(
-        {
-          fileName: "road.jpg",
-          contentType: "image/jpeg",
-          contentLength: file.size,
-        },
-        auth.token,
-      );
+      expect(mocks.requestReportImageUpload).toHaveBeenCalledWith(auth.token);
     });
     expect(mocks.uploadReportImage).toHaveBeenCalledWith(upload, file);
     expect(mocks.createReport).toHaveBeenCalledWith(
       {
         description: "Large pothole near the junction.",
         categoryId: category.id,
-        photoUrl: upload.imageUrl,
         county: "Nairobi",
         roadName: "Main Road",
+        images: [
+          {
+            publicId: cloudinaryImage.public_id,
+            version: "1",
+            signature: cloudinaryImage.signature,
+          },
+        ],
       },
       auth.token,
     );
@@ -173,7 +207,7 @@ describe("ReportForm", () => {
     renderReportForm();
     await fillReportFields();
     await user.upload(
-      screen.getByLabelText("Photo"),
+      screen.getByLabelText("Images"),
       new File(["image"], "road.jpg", { type: "image/jpeg" }),
     );
     fireEvent.submit(screen.getByRole("button", { name: "Submit report" }).closest("form")!);
@@ -182,6 +216,26 @@ describe("ReportForm", () => {
       expect(screen.getByText("Upload failed.")).toBeInTheDocument();
     });
     expect(mocks.createReport).not.toHaveBeenCalled();
+  });
+
+  it("shows backend report creation failures after successful image uploads", async () => {
+    const user = userEvent.setup();
+
+    mocks.createReport.mockRejectedValue(new ApiError("Report validation failed.", 400));
+
+    renderReportForm();
+    await fillReportFields();
+    await user.upload(
+      screen.getByLabelText("Images"),
+      new File(["image"], "road.jpg", { type: "image/jpeg" }),
+    );
+    fireEvent.submit(screen.getByRole("button", { name: "Submit report" }).closest("form")!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Report validation failed.")).toBeInTheDocument();
+    });
+    expect(mocks.uploadReportImage).toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
   });
 });
 

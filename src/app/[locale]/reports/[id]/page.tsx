@@ -72,14 +72,27 @@ export default async function ReportDetailPage({ params }: ReportDetailPageProps
               }
             />
           </dl>
-          <a
-            className="mt-6 inline-flex text-sm font-semibold text-[#1f6f4a] underline-offset-4 hover:underline"
-            href={report.photoUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            {messages.reportDetail.openPhoto}
-          </a>
+          {report.images.length > 0 ? (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {report.images.map((image) => (
+                <a
+                  className="group grid gap-2 text-sm font-semibold text-[#1f6f4a] underline-offset-4 hover:underline"
+                  href={image.imageUrl}
+                  key={image.id}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt=""
+                    className="h-44 w-full rounded-md border border-[#d6e1d9] object-cover"
+                    src={image.imageUrl}
+                  />
+                  <span>{messages.reportDetail.openImage}</span>
+                </a>
+              ))}
+            </div>
+          ) : null}
         </article>
         <aside className="grid content-start gap-6">
           <ReportDetailActions report={report} />

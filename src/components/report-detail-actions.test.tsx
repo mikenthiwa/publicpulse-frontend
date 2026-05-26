@@ -37,7 +37,13 @@ const report: ReportResponse = {
   description: "Large pothole near the junction.",
   categoryId: "category-1",
   categoryName: "Road damage",
-  photoUrl: "https://example.com/photo.jpg",
+  images: [
+    {
+      id: "image-1",
+      imageUrl: "https://example.com/photo.jpg",
+      publicId: "reports/photo",
+    },
+  ],
   county: "Nairobi",
   roadName: "Main Road",
   status: 0,
