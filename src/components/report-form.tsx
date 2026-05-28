@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { Message } from "@/components/message";
 import { fieldLabel, inputControl, primaryButton } from "@/components/ui";
@@ -42,6 +42,7 @@ export function ReportForm() {
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const imagePreviewUrlsRef = useRef<string[]>([]);
   const [submitLabel, setSubmitLabel] = useState<string>(messages.reportForm.submit);
 
   useEffect(() => {
@@ -95,11 +96,11 @@ export function ReportForm() {
 
   useEffect(() => {
     return () => {
-      imagePreviewUrls.forEach((imagePreviewUrl) => {
+      imagePreviewUrlsRef.current.forEach((imagePreviewUrl) => {
         URL.revokeObjectURL(imagePreviewUrl);
       });
     };
-  }, [imagePreviewUrls]);
+  }, []);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -175,27 +176,28 @@ export function ReportForm() {
   function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
 
-    imagePreviewUrls.forEach((imagePreviewUrl) => {
-      URL.revokeObjectURL(imagePreviewUrl);
-    });
-    setImagePreviewUrls([]);
-
     if (files.length === 0) {
-      setForm({ ...form, imageFiles: [] });
+      event.target.value = "";
       return;
     }
 
-    const imageValidationError = getImageValidationError(files);
+    const nextImageFiles = [...form.imageFiles, ...files];
+    const imageValidationError = getImageValidationError(nextImageFiles);
     if (imageValidationError) {
       setError(imageValidationError);
-      setForm({ ...form, imageFiles: [] });
       event.target.value = "";
       return;
     }
 
     setError("");
-    setForm({ ...form, imageFiles: files });
-    setImagePreviewUrls(files.map((file) => URL.createObjectURL(file)));
+    setForm({ ...form, imageFiles: nextImageFiles });
+    const nextImagePreviewUrls = [
+      ...imagePreviewUrls,
+      ...files.map((file) => URL.createObjectURL(file)),
+    ];
+    imagePreviewUrlsRef.current = nextImagePreviewUrls;
+    setImagePreviewUrls(nextImagePreviewUrls);
+    event.target.value = "";
   }
 
   function getImageValidationError(files: File[]) {
@@ -240,7 +242,6 @@ export function ReportForm() {
           className="rounded-lg border border-dashed border-[#b9c4b4] bg-[#fbfcf8] px-4 py-4 font-normal outline-none transition file:mr-4 file:rounded-md file:border-0 file:bg-[#e1ede5] file:px-3 file:py-2 file:text-sm file:font-bold file:text-[#176b45] focus:border-[#176b45] focus:ring-2 focus:ring-[#cfe3d6]"
           multiple
           onChange={handleImageChange}
-          required
           type="file"
         />
         <span className="text-xs font-normal leading-5 text-[#5c6a61]">

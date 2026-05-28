@@ -94,7 +94,7 @@ describe("ReportForm", () => {
       lastModified: null,
     });
     vi.stubGlobal("URL", {
-      createObjectURL: vi.fn(() => "blob:preview"),
+      createObjectURL: vi.fn((file: File) => `blob:${file.name}`),
       revokeObjectURL: vi.fn(),
     });
   });
@@ -104,10 +104,12 @@ describe("ReportForm", () => {
   });
 
   it("requires an image before submitting", async () => {
+    const user = userEvent.setup();
+
     renderReportForm();
     await fillReportFields();
 
-    fireEvent.submit(screen.getByRole("button", { name: "Submit report" }).closest("form")!);
+    await user.click(screen.getByRole("button", { name: "Submit report" }));
 
     expect(
       screen.getByText("Add at least one report image before submitting."),
@@ -172,7 +174,7 @@ describe("ReportForm", () => {
     renderReportForm();
     await fillReportFields();
     await user.upload(screen.getByLabelText("Images"), file);
-    fireEvent.submit(screen.getByRole("button", { name: "Submit report" }).closest("form")!);
+    await user.click(screen.getByRole("button", { name: "Submit report" }));
 
     await waitFor(() => {
       expect(mocks.requestReportImageUpload).toHaveBeenCalledWith(auth.token);
@@ -197,6 +199,70 @@ describe("ReportForm", () => {
     expect(mocks.addOwnedReport).toHaveBeenCalledWith(auth.userId, "report-1");
     expect(mocks.push).toHaveBeenCalledWith("/en/reports/report-1");
     expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it("adds valid images across separate selections before creating the report", async () => {
+    const user = userEvent.setup();
+    const firstFile = new File(["first image"], "road-before.jpg", {
+      type: "image/jpeg",
+    });
+    const secondFile = new File(["second image"], "road-after.png", {
+      type: "image/png",
+    });
+    const firstCloudinaryImage = {
+      ...cloudinaryImage,
+      public_id: "reports/road-before",
+      secure_url:
+        "https://res.cloudinary.com/publicpulse/image/upload/v1/reports/road-before.jpg",
+    };
+    const secondCloudinaryImage = {
+      ...cloudinaryImage,
+      public_id: "reports/road-after",
+      secure_url:
+        "https://res.cloudinary.com/publicpulse/image/upload/v1/reports/road-after.png",
+      version: 2,
+    };
+    mocks.uploadReportImage
+      .mockResolvedValueOnce(firstCloudinaryImage)
+      .mockResolvedValueOnce(secondCloudinaryImage);
+
+    renderReportForm();
+    await fillReportFields();
+    await user.upload(screen.getByLabelText("Images"), firstFile);
+    await user.upload(screen.getByLabelText("Images"), secondFile);
+
+    expect(screen.getByText("road-before.jpg")).toBeInTheDocument();
+    expect(screen.getByText("road-after.png")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Submit report" }));
+
+    await waitFor(() => {
+      expect(mocks.requestReportImageUpload).toHaveBeenCalledWith(auth.token);
+    });
+    expect(mocks.uploadReportImage).toHaveBeenCalledTimes(2);
+    expect(mocks.uploadReportImage).toHaveBeenNthCalledWith(1, upload, firstFile);
+    expect(mocks.uploadReportImage).toHaveBeenNthCalledWith(2, upload, secondFile);
+    expect(mocks.createReport).toHaveBeenCalledWith(
+      {
+        description: "Large pothole near the junction.",
+        categoryId: category.id,
+        county: "Nairobi",
+        roadName: "Main Road",
+        images: [
+          {
+            publicId: firstCloudinaryImage.public_id,
+            version: "1",
+            signature: firstCloudinaryImage.signature,
+          },
+          {
+            publicId: secondCloudinaryImage.public_id,
+            version: "2",
+            signature: secondCloudinaryImage.signature,
+          },
+        ],
+      },
+      auth.token,
+    );
   });
 
   it("does not create a report when image upload fails", async () => {
