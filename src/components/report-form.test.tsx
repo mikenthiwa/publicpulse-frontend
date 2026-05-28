@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   refresh: vi.fn(),
   requestReportImageUpload: vi.fn(),
+  reverseGeocodeLocation: vi.fn(),
   uploadReportImage: vi.fn(),
 }));
 
@@ -29,6 +30,7 @@ vi.mock("@/services/api", () => ({
     createReport: mocks.createReport,
     listCategories: mocks.listCategories,
     requestReportImageUpload: mocks.requestReportImageUpload,
+    reverseGeocodeLocation: mocks.reverseGeocodeLocation,
     uploadReportImage: mocks.uploadReportImage,
   },
 }));
@@ -73,6 +75,15 @@ describe("ReportForm", () => {
     mocks.getStoredAuth.mockReturnValue(auth);
     mocks.listCategories.mockResolvedValue([category]);
     mocks.requestReportImageUpload.mockResolvedValue(upload);
+    mocks.reverseGeocodeLocation.mockResolvedValue({
+      county: "Nairobi",
+      roadName: "Kenyatta Avenue",
+      locationLabel: "Kenyatta Avenue, Nairobi",
+      latitude: -1.2864,
+      longitude: 36.8172,
+      source: "mapbox",
+      confidence: "high",
+    });
     mocks.uploadReportImage.mockResolvedValue(cloudinaryImage);
     mocks.createReport.mockResolvedValue({
       id: "report-1",
@@ -201,6 +212,113 @@ describe("ReportForm", () => {
     expect(mocks.refresh).toHaveBeenCalled();
   });
 
+  it("prefills location from browser coordinates before creating the report", async () => {
+    const user = userEvent.setup();
+    const file = new File(["image"], "road.jpg", { type: "image/jpeg" });
+    const getCurrentPosition = mockGeolocationSuccess({
+      latitude: -1.2864,
+      longitude: 36.8172,
+    });
+
+    renderReportForm();
+    await screen.findByRole("option", { name: category.name });
+    await user.click(screen.getByRole("button", { name: "Use my location" }));
+
+    await waitFor(() => {
+      expect(mocks.reverseGeocodeLocation).toHaveBeenCalledWith(-1.2864, 36.8172);
+    });
+    expect(getCurrentPosition).toHaveBeenCalled();
+    expect(screen.getByLabelText("County")).toHaveValue("Nairobi");
+    expect(screen.getByLabelText("Road name")).toHaveValue("Kenyatta Avenue");
+    expect(
+      screen.getByText("Location suggestion added. Review the fields before submitting."),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText("Description"),
+      " Large pothole near the junction. ",
+    );
+    await user.upload(screen.getByLabelText("Images"), file);
+    await user.click(screen.getByRole("button", { name: "Submit report" }));
+
+    await waitFor(() => {
+      expect(mocks.createReport).toHaveBeenCalledWith(
+        {
+          description: "Large pothole near the junction.",
+          categoryId: category.id,
+          county: "Nairobi",
+          roadName: "Kenyatta Avenue",
+          latitude: -1.2864,
+          longitude: 36.8172,
+          locationLabel: "Kenyatta Avenue, Nairobi",
+          locationSource: "mapbox",
+          images: [
+            {
+              publicId: cloudinaryImage.public_id,
+              version: "1",
+              signature: cloudinaryImage.signature,
+            },
+          ],
+        },
+        auth.token,
+      );
+    });
+  });
+
+  it("keeps manual location entry usable when browser permission is denied", async () => {
+    const user = userEvent.setup();
+
+    mockGeolocationError({ code: 1 });
+
+    renderReportForm();
+    await screen.findByRole("option", { name: category.name });
+    await user.click(screen.getByRole("button", { name: "Use my location" }));
+
+    expect(
+      await screen.findByText(
+        "Location permission was denied. Enter the county and road name manually.",
+      ),
+    ).toBeInTheDocument();
+    expect(mocks.reverseGeocodeLocation).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText("County"), "Nairobi");
+    await user.type(screen.getByLabelText("Road name"), "Main Road");
+
+    expect(screen.getByLabelText("County")).toHaveValue("Nairobi");
+    expect(screen.getByLabelText("Road name")).toHaveValue("Main Road");
+  });
+
+  it("does not overwrite user-entered location fields with partial lookup results", async () => {
+    const user = userEvent.setup();
+
+    mockGeolocationSuccess({ latitude: -1.3, longitude: 36.8 });
+    mocks.reverseGeocodeLocation.mockResolvedValue({
+      county: "Nairobi",
+      roadName: null,
+      locationLabel: "Nairobi, Kenya",
+      latitude: -1.3,
+      longitude: 36.8,
+      source: "mapbox",
+      confidence: "medium",
+    });
+
+    renderReportForm();
+    await screen.findByRole("option", { name: category.name });
+    await user.type(screen.getByLabelText("County"), "Kiambu");
+    await user.type(screen.getByLabelText("Road name"), "Manual Road");
+    await user.click(screen.getByRole("button", { name: "Use my location" }));
+
+    await waitFor(() => {
+      expect(mocks.reverseGeocodeLocation).toHaveBeenCalledWith(-1.3, 36.8);
+    });
+    expect(screen.getByLabelText("County")).toHaveValue("Kiambu");
+    expect(screen.getByLabelText("Road name")).toHaveValue("Manual Road");
+    expect(
+      screen.getByText(
+        "Location found, but the road or county could not be identified. Complete the fields manually.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("adds valid images across separate selections before creating the report", async () => {
     const user = userEvent.setup();
     const firstFile = new File(["first image"], "road-before.jpg", {
@@ -323,4 +441,55 @@ function renderReportForm(locale: Locale = "en") {
       <ReportForm />
     </I18nProvider>,
   );
+}
+
+function mockGeolocationSuccess(coords: { latitude: number; longitude: number }) {
+  const getCurrentPosition = vi.fn(
+    (success: PositionCallback) => {
+      success({
+        coords: {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      });
+    },
+  );
+
+  vi.stubGlobal("navigator", {
+    ...navigator,
+    geolocation: {
+      getCurrentPosition,
+    },
+  });
+
+  return getCurrentPosition;
+}
+
+function mockGeolocationError(error: { code: number }) {
+  const getCurrentPosition = vi.fn(
+    (_success: PositionCallback, failure?: PositionErrorCallback | null) => {
+      failure?.({
+        code: error.code,
+        message: "Permission denied.",
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      });
+    },
+  );
+
+  vi.stubGlobal("navigator", {
+    ...navigator,
+    geolocation: {
+      getCurrentPosition,
+    },
+  });
+
+  return getCurrentPosition;
 }

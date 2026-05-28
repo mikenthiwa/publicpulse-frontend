@@ -5,6 +5,7 @@ import type {
   CloudinaryUploadResponse,
   ConfirmReportResponse,
   CreateReportRequest,
+  LocationLookupResponse,
   LoginRequest,
   RegisterRequest,
   RequestReportImageUploadResponse,
@@ -166,6 +167,14 @@ export const publicPulseApi = {
   },
   listCategories() {
     return request<CategoryResponse[]>("/api/Categories");
+  },
+  reverseGeocodeLocation(latitude: number, longitude: number) {
+    const params = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    });
+
+    return request<LocationLookupResponse>(`/api/Locations/reverse?${params}`);
   },
   listReports() {
     return request<ReportListItemResponse[]>("/api/Reports");

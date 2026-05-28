@@ -100,6 +100,20 @@ export const messages = {
       selectedImages: "Selected images",
       county: "County",
       roadName: "Road name",
+      useLocation: "Use my location",
+      locating: "Finding location...",
+      locationHelp:
+        "Use GPS to suggest the county and road name, then review before submitting.",
+      locationFound: "Location suggestion added. Review the fields before submitting.",
+      locationPartial:
+        "Location found, but the road or county could not be identified. Complete the fields manually.",
+      locationUnsupported: "Location lookup is not supported in this browser.",
+      locationDenied:
+        "Location permission was denied. Enter the county and road name manually.",
+      locationUnavailable:
+        "Unable to find your location. Enter the county and road name manually.",
+      locationLookupError:
+        "Unable to identify the road from your location. Enter it manually.",
       submitting: "Submitting...",
       uploading: "Uploading images...",
       submit: "Submit report",
@@ -241,6 +255,20 @@ export const messages = {
       selectedImages: "Picha zilizochaguliwa",
       county: "Kaunti",
       roadName: "Jina la barabara",
+      useLocation: "Tumia eneo langu",
+      locating: "Inatafuta eneo...",
+      locationHelp:
+        "Tumia GPS kupendekeza kaunti na jina la barabara, kisha hakiki kabla ya kuwasilisha.",
+      locationFound: "Pendekezo la eneo limeongezwa. Hakiki sehemu kabla ya kuwasilisha.",
+      locationPartial:
+        "Eneo limepatikana, lakini barabara au kaunti haikutambulika. Kamilisha sehemu mwenyewe.",
+      locationUnsupported: "Utafutaji wa eneo hautumiki kwenye kivinjari hiki.",
+      locationDenied:
+        "Ruhusa ya eneo imekataliwa. Weka kaunti na jina la barabara mwenyewe.",
+      locationUnavailable:
+        "Imeshindikana kupata eneo lako. Weka kaunti na jina la barabara mwenyewe.",
+      locationLookupError:
+        "Imeshindikana kutambua barabara kutoka eneo lako. Weka mwenyewe.",
       submitting: "Inawasilisha...",
       uploading: "Inapakia picha...",
       submit: "Wasilisha ripoti",

@@ -31,6 +31,10 @@ export type CreateReportRequest = {
   categoryId: string;
   county: string;
   roadName: string;
+  latitude?: number;
+  longitude?: number;
+  locationLabel?: string;
+  locationSource?: string;
   images: CreateReportImageRequest[];
 };
 
@@ -66,6 +70,10 @@ export type ReportListItemResponse = {
   images: ReportImageResponse[];
   county: string;
   roadName: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  locationLabel?: string | null;
+  locationSource?: string | null;
   status: ReportStatus;
   confirmationCount: number;
   created: string;
@@ -85,6 +93,16 @@ export type ReportResponse = ReportListItemResponse & {
 export type ConfirmReportResponse = {
   reportId: string;
   confirmationCount: number;
+};
+
+export type LocationLookupResponse = {
+  county: string | null;
+  roadName: string | null;
+  locationLabel: string | null;
+  latitude: number;
+  longitude: number;
+  source: string;
+  confidence: "high" | "medium" | "low";
 };
 
 export class ApiError extends Error {

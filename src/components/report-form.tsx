@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { Message } from "@/components/message";
-import { fieldLabel, inputControl, primaryButton } from "@/components/ui";
+import { fieldLabel, inputControl, primaryButton, secondaryButton } from "@/components/ui";
 import { useI18n } from "@/i18n/client";
 import { publicPulseApi } from "@/services/api";
 import { addOwnedReport, getStoredAuth } from "@/services/auth-storage";
@@ -16,6 +16,10 @@ type FormState = {
   imageFiles: File[];
   county: string;
   roadName: string;
+  latitude?: number;
+  longitude?: number;
+  locationLabel?: string;
+  locationSource?: string;
 };
 
 const initialFormState: FormState = {
@@ -41,6 +45,10 @@ export function ReportForm() {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+  const [locationMessageTone, setLocationMessageTone] =
+    useState<"neutral" | "error" | "success">("neutral");
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const imagePreviewUrlsRef = useRef<string[]>([]);
   const [submitLabel, setSubmitLabel] = useState<string>(messages.reportForm.submit);
@@ -150,6 +158,10 @@ export function ReportForm() {
       const createdReport = await publicPulseApi.createReport(
         {
           ...trimmedForm,
+          ...(form.latitude !== undefined ? { latitude: form.latitude } : {}),
+          ...(form.longitude !== undefined ? { longitude: form.longitude } : {}),
+          ...(form.locationLabel ? { locationLabel: form.locationLabel } : {}),
+          ...(form.locationSource ? { locationSource: form.locationSource } : {}),
           images: uploadedImages.map((uploadedImage) => ({
             publicId: uploadedImage.public_id,
             version: uploadedImage.version.toString(),
@@ -170,6 +182,69 @@ export function ReportForm() {
     } finally {
       setIsSubmitting(false);
       setSubmitLabel(messages.reportForm.submit);
+    }
+  }
+
+  async function handleUseLocation() {
+    setError("");
+    setLocationMessage("");
+
+    if (!navigator.geolocation) {
+      setLocationMessage(messages.reportForm.locationUnsupported);
+      setLocationMessageTone("error");
+      return;
+    }
+
+    setIsLocating(true);
+
+    try {
+      const position = await getCurrentPosition();
+      const location = await publicPulseApi.reverseGeocodeLocation(
+        position.coords.latitude,
+        position.coords.longitude,
+      );
+
+      setForm((current) => ({
+        ...current,
+        county:
+          location.county && current.county.trim() === ""
+            ? location.county
+            : current.county,
+        roadName:
+          location.roadName && current.roadName.trim() === ""
+            ? location.roadName
+            : current.roadName,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        locationLabel: location.locationLabel ?? undefined,
+        locationSource: location.source,
+      }));
+      setLocationMessage(
+        location.county && location.roadName
+          ? messages.reportForm.locationFound
+          : messages.reportForm.locationPartial,
+      );
+      setLocationMessageTone(location.county && location.roadName ? "success" : "neutral");
+    } catch (caughtError) {
+      const locationErrorCode =
+        typeof caughtError === "object" && caughtError !== null && "code" in caughtError
+          ? caughtError.code
+          : undefined;
+      const permissionDeniedCode =
+        typeof GeolocationPositionError === "undefined"
+          ? 1
+          : GeolocationPositionError.PERMISSION_DENIED;
+
+      setLocationMessage(
+        locationErrorCode === permissionDeniedCode
+          ? messages.reportForm.locationDenied
+          : caughtError instanceof ApiError
+            ? caughtError.message
+            : messages.reportForm.locationUnavailable,
+      );
+      setLocationMessageTone("error");
+    } finally {
+      setIsLocating(false);
     }
   }
 
@@ -294,21 +369,46 @@ export function ReportForm() {
           ))}
         </select>
       </label>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field
-          label={messages.reportForm.county}
-          icon="map-pin"
-          value={form.county}
-          onChange={(value) => setForm({ ...form, county: value })}
-          required
-        />
-        <Field
-          label={messages.reportForm.roadName}
-          icon="map-pin"
-          value={form.roadName}
-          onChange={(value) => setForm({ ...form, roadName: value })}
-          required
-        />
+      <div className="grid gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="grid gap-1">
+            <span className="inline-flex items-center gap-2 text-sm font-bold text-[#27362e]">
+              <Icon name="map-pin" size={16} />
+              {messages.reportCard.location}
+            </span>
+            <span className="text-xs leading-5 text-[#5c6a61]">
+              {messages.reportForm.locationHelp}
+            </span>
+          </div>
+          <button
+            className={secondaryButton}
+            disabled={isLocating || isSubmitting}
+            onClick={handleUseLocation}
+            type="button"
+          >
+            <Icon name="map-pin" size={17} />
+            {isLocating ? messages.reportForm.locating : messages.reportForm.useLocation}
+          </button>
+        </div>
+        {locationMessage ? (
+          <Message tone={locationMessageTone}>{locationMessage}</Message>
+        ) : null}
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field
+            label={messages.reportForm.county}
+            icon="map-pin"
+            value={form.county}
+            onChange={(value) => setForm({ ...form, county: value })}
+            required
+          />
+          <Field
+            label={messages.reportForm.roadName}
+            icon="map-pin"
+            value={form.roadName}
+            onChange={(value) => setForm({ ...form, roadName: value })}
+            required
+          />
+        </div>
       </div>
       <label className={fieldLabel}>
         <span className="inline-flex items-center gap-2">
@@ -332,6 +432,16 @@ export function ReportForm() {
       </button>
     </form>
   );
+}
+
+function getCurrentPosition() {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      maximumAge: 60_000,
+      timeout: 10_000,
+    });
+  });
 }
 
 type FieldProps = {
