@@ -2,11 +2,12 @@ import type {
   ApiResponse,
   AuthResponse,
   CategoryResponse,
+  CloudinaryUploadResponse,
   ConfirmReportResponse,
   CreateReportRequest,
+  LocationLookupResponse,
   LoginRequest,
   RegisterRequest,
-  RequestReportImageUploadRequest,
   RequestReportImageUploadResponse,
   ReportListItemResponse,
   ReportResponse,
@@ -87,32 +88,54 @@ function messageForStatus(status: number) {
   return "Something went wrong. Try again.";
 }
 
-async function uploadFile(
-  uploadUrl: string,
+async function uploadReportImageToCloudinary(
+  upload: RequestReportImageUploadResponse,
   file: File,
-  uploadHeaders: Record<string, string> = {},
-) {
-  const headers = new Headers(uploadHeaders);
-
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", file.type);
-  }
+): Promise<CloudinaryUploadResponse> {
+  const formData = new FormData();
+  formData.set("file", file);
+  formData.set("api_key", upload.apiKey);
+  formData.set("timestamp", upload.timestamp.toString());
+  formData.set("folder", upload.folder);
+  formData.set("upload_preset", upload.uploadPreset);
+  formData.set("signature", upload.signature);
 
   let response: Response;
 
   try {
-    response = await fetch(uploadUrl, {
-      method: "PUT",
-      headers,
-      body: file,
+    response = await fetch(getCloudinaryUploadUrl(upload.cloudName), {
+      method: "POST",
+      body: formData,
     });
   } catch {
     throw new ApiError("Unable to upload the report image.", 0);
   }
 
+  let payload: Partial<CloudinaryUploadResponse> = {};
+
+  try {
+    payload = (await response.json()) as Partial<CloudinaryUploadResponse>;
+  } catch {
+    payload = {};
+  }
+
   if (!response.ok) {
     throw new ApiError("Unable to upload the report image.", response.status);
   }
+
+  if (
+    !payload.public_id ||
+    typeof payload.version !== "number" ||
+    !payload.signature
+  ) {
+    throw new ApiError("Unable to upload the report image.", response.status);
+  }
+
+  return {
+    public_id: payload.public_id,
+    version: payload.version,
+    signature: payload.signature,
+  };
 }
 
 function getRequestUrl(path: string) {
@@ -121,6 +144,12 @@ function getRequestUrl(path: string) {
   }
 
   return `/api/publicpulse${path}`;
+}
+
+function getCloudinaryUploadUrl(cloudName: string) {
+  return `https://api.cloudinary.com/v1_1/${encodeURIComponent(
+    cloudName,
+  )}/image/upload`;
 }
 
 export const publicPulseApi = {
@@ -139,6 +168,14 @@ export const publicPulseApi = {
   listCategories() {
     return request<CategoryResponse[]>("/api/Categories");
   },
+  reverseGeocodeLocation(latitude: number, longitude: number) {
+    const params = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    });
+
+    return request<LocationLookupResponse>(`/api/Locations/reverse?${params}`);
+  },
   listReports() {
     return request<ReportListItemResponse[]>("/api/Reports");
   },
@@ -152,15 +189,11 @@ export const publicPulseApi = {
       token,
     });
   },
-  requestReportImageUpload(
-    requestBody: RequestReportImageUploadRequest,
-    token: string,
-  ) {
+  requestReportImageUpload(token: string) {
     return request<RequestReportImageUploadResponse>(
-      "/api/Reports/images/upload-url",
+      "/api/Reports/images/upload-signature",
       {
         method: "POST",
-        body: requestBody,
         token,
       },
     );
@@ -169,7 +202,7 @@ export const publicPulseApi = {
     upload: RequestReportImageUploadResponse,
     file: File,
   ) {
-    return uploadFile(upload.uploadUrl, file, upload.headers);
+    return uploadReportImageToCloudinary(upload, file);
   },
   confirmReport(id: string) {
     return request<ConfirmReportResponse>(`/api/Reports/${id}/confirmations`, {

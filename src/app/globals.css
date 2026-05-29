@@ -1,18 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8f4;
-  --foreground: #172019;
+  --background: #f5f6f1;
+  --foreground: #151d19;
+  --surface: #ffffff;
+  --surface-muted: #eef1e9;
+  --surface-subtle: #fafbf7;
+  --border: #d8ded2;
+  --border-strong: #b9c4b4;
+  --muted: #5c6a61;
+  --muted-strong: #39483f;
+  --accent: #176b45;
+  --accent-strong: #0f5335;
+  --accent-soft: #e1ede5;
+  --danger: #8d3324;
+  --danger-soft: #fff1ed;
+  --success: #22613f;
+  --success-soft: #eef8f1;
+  --info: #294f7a;
+  --info-soft: #eef5ff;
+  --shadow-soft: 0 1px 2px rgb(21 29 25 / 0.06), 0 12px 32px rgb(21 29 25 / 0.08);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Aptos", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+:focus-visible {
+  outline: 3px solid rgb(23 107 69 / 0.35);
+  outline-offset: 3px;
 }

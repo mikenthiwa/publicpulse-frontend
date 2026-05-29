@@ -27,25 +27,36 @@ export type CategoryResponse = {
 export type ReportStatus = "Reported" | "InProgress" | "Resolved" | 0 | 1 | 2;
 
 export type CreateReportRequest = {
-  title: string;
   description: string;
   categoryId: string;
-  photoUrl: string;
   county: string;
   roadName: string;
+  latitude?: number;
+  longitude?: number;
+  locationLabel?: string;
+  locationSource?: string;
+  images: CreateReportImageRequest[];
 };
 
-export type RequestReportImageUploadRequest = {
-  fileName: string;
-  contentType: string;
-  contentLength: number;
+export type CreateReportImageRequest = {
+  publicId: string;
+  version: string;
+  signature: string;
 };
 
 export type RequestReportImageUploadResponse = {
-  uploadUrl: string;
-  imageUrl: string;
-  imageKey: string;
-  headers?: Record<string, string>;
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: string;
+  uploadPreset: string;
+  signature: string;
+};
+
+export type CloudinaryUploadResponse = {
+  public_id: string;
+  version: number;
+  signature: string;
 };
 
 export type UpdateReportStatusRequest = {
@@ -54,25 +65,44 @@ export type UpdateReportStatusRequest = {
 
 export type ReportListItemResponse = {
   id: string;
-  title: string;
   categoryId: string;
   categoryName: string;
+  images: ReportImageResponse[];
   county: string;
   roadName: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  locationLabel?: string | null;
+  locationSource?: string | null;
   status: ReportStatus;
   confirmationCount: number;
-  createdAtUtc: string;
+  created: string;
+};
+
+export type ReportImageResponse = {
+  id: string;
+  imageUrl: string;
+  publicId: string;
 };
 
 export type ReportResponse = ReportListItemResponse & {
   description: string;
-  photoUrl: string;
-  updatedAtUtc: string | null;
+  lastModified: string | null;
 };
 
 export type ConfirmReportResponse = {
   reportId: string;
   confirmationCount: number;
+};
+
+export type LocationLookupResponse = {
+  county: string | null;
+  roadName: string | null;
+  locationLabel: string | null;
+  latitude: number;
+  longitude: number;
+  source: string;
+  confidence: "high" | "medium" | "low";
 };
 
 export class ApiError extends Error {

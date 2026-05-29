@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Icon } from "@/components/icons";
 import { Message } from "@/components/message";
 import { ReportCard } from "@/components/report-card";
+import { elevatedSurface, eyebrow, pageShell, primaryButton } from "@/components/ui";
 import { getLocale, localizePath } from "@/i18n/config";
 import { getMessages } from "@/i18n/server";
 import { publicPulseApi } from "@/services/api";
@@ -29,35 +31,42 @@ export default async function ReportsPage({ params }: ReportsPageProps) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10 lg:px-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#2f6f4e]">
-            {messages.reports.eyebrow}
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold text-[#172019] sm:text-4xl">
-            {messages.reports.title}
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[#536257]">
-            {messages.reports.description}
-          </p>
+    <main className={pageShell}>
+      <div className={`${elevatedSurface} p-6 sm:p-8`}>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className={eyebrow}>{messages.reports.eyebrow}</p>
+            <h1 className="mt-3 text-3xl font-black leading-tight text-[#151d19] sm:text-4xl">
+              {messages.reports.title}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#4f5f55]">
+              {messages.reports.description}
+            </p>
+          </div>
+          <Link className={primaryButton} href={localizePath("/reports/new", locale)}>
+            <Icon name="plus" size={17} />
+            {messages.reports.createReport}
+          </Link>
         </div>
-        <Link
-          className="inline-flex h-11 items-center justify-center rounded-md bg-[#1f6f4a] px-5 text-sm font-semibold text-white transition hover:bg-[#185a3c]"
-          href={localizePath("/reports/new", locale)}
-        >
-          {messages.reports.createReport}
-        </Link>
       </div>
-      <div className="mt-8">
+      <div className="mt-6">
         {error ? <Message tone="error">{error}</Message> : null}
         {!error && reports.length === 0 ? (
-          <Message title={messages.reports.emptyTitle}>
-            {messages.reports.emptyBody}
-          </Message>
+          <div className="rounded-lg border border-dashed border-[#b9c4b4] bg-white p-8 text-center">
+            <Message title={messages.reports.emptyTitle}>
+              {messages.reports.emptyBody}
+            </Message>
+            <Link
+              className={`${primaryButton} mt-5`}
+              href={localizePath("/reports/new", locale)}
+            >
+              <Icon name="plus" size={17} />
+              {messages.reports.createReport}
+            </Link>
+          </div>
         ) : null}
         {!error && reports.length > 0 ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {reports.map((report) => (
               <ReportCard key={report.id} report={report} />
             ))}

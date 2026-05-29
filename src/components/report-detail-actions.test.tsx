@@ -34,17 +34,22 @@ const auth: AuthResponse = {
 
 const report: ReportResponse = {
   id: "report-1",
-  title: "Pothole on main road",
   description: "Large pothole near the junction.",
   categoryId: "category-1",
   categoryName: "Road damage",
-  photoUrl: "https://example.com/photo.jpg",
+  images: [
+    {
+      id: "image-1",
+      imageUrl: "https://example.com/photo.jpg",
+      publicId: "reports/photo",
+    },
+  ],
   county: "Nairobi",
   roadName: "Main Road",
   status: 0,
   confirmationCount: 2,
-  createdAtUtc: "2026-05-10T10:00:00Z",
-  updatedAtUtc: null,
+  created: "2026-05-10T10:00:00Z",
+  lastModified: null,
 };
 
 describe("ReportDetailActions", () => {

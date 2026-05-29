@@ -23,6 +23,13 @@
 - Preserve Tailwind CSS conventions and the restrained civic UI style already in the app.
 - Keep components focused, readable, and explicit about loading, empty, and error states.
 
+# UI Skills
+
+- For any frontend/UI work, always use `.codex/skills/ui-design-brain/SKILL.md`.
+- Before writing or modifying UI code, read the skill instructions and consult `.codex/skills/ui-design-brain/components.md` for the relevant component patterns.
+- Select the applicable components first, then implement using the skill's best practices for layout, states, accessibility, and interaction.
+- Mention in the final response which UI skill guidance was used.
+
 # Review
 
 - Check `git status --short` before and after changes.
