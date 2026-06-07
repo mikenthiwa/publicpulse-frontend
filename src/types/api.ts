@@ -4,6 +4,29 @@ export type ApiResponse<T> = {
   data: T | null;
 };
 
+export type PaginatedList<T> = {
+  items: T[];
+  count: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type ProblemDetails = {
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
+  instance?: string;
+  traceId?: string;
+};
+
+export type ValidationProblemDetails = ProblemDetails & {
+  errors?: Record<string, string[]>;
+};
+
 export type RegisterRequest = {
   email: string;
   password: string;
@@ -106,11 +129,25 @@ export type LocationLookupResponse = {
 };
 
 export class ApiError extends Error {
+  public readonly title?: string;
+  public readonly type?: string;
+  public readonly instance?: string;
+  public readonly traceId?: string;
+  public readonly validationErrors: Record<string, string[]>;
+
   constructor(
     message: string,
     public readonly status: number,
+    details: Omit<ProblemDetails, "detail" | "status"> & {
+      validationErrors?: Record<string, string[]>;
+    } = {},
   ) {
     super(message);
     this.name = "ApiError";
+    this.title = details.title;
+    this.type = details.type;
+    this.instance = details.instance;
+    this.traceId = details.traceId;
+    this.validationErrors = details.validationErrors ?? {};
   }
 }

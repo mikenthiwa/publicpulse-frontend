@@ -7,11 +7,13 @@ import type {
   CreateReportRequest,
   LocationLookupResponse,
   LoginRequest,
+  PaginatedList,
   RegisterRequest,
   RequestReportImageUploadResponse,
   ReportListItemResponse,
   ReportResponse,
   ReportStatus,
+  ValidationProblemDetails,
 } from "@/types/api";
 import { ApiError } from "@/types/api";
 
@@ -53,28 +55,90 @@ async function request<T>(
     throw new ApiError("Unable to reach the PublicPulse API.", 0);
   }
 
-  const payload = await readPayload<T>(response);
+  const payload = await readJson(response);
 
-  if (!response.ok || !payload.success || payload.data === null) {
-    throw new ApiError(
-      payload.message || messageForStatus(response.status),
-      response.status,
-    );
+  if (!response.ok) {
+    throw createApiError(response.status, payload);
+  }
+
+  if (!isApiResponse<T>(payload) || !payload.success || payload.data === null) {
+    throw new ApiError(messageForStatus(response.status), response.status);
   }
 
   return payload.data;
 }
 
-async function readPayload<T>(response: Response): Promise<ApiResponse<T>> {
+async function readJson(response: Response): Promise<unknown> {
   try {
-    return (await response.json()) as ApiResponse<T>;
+    return await response.json();
   } catch {
-    return {
-      success: false,
-      message: messageForStatus(response.status),
-      data: null,
-    };
+    return null;
   }
+}
+
+function createApiError(status: number, payload: unknown) {
+  const problemDetails = parseProblemDetails(payload);
+
+  return new ApiError(
+    problemDetails?.detail || messageForStatus(status),
+    status,
+    {
+      title: problemDetails?.title,
+      type: problemDetails?.type,
+      instance: problemDetails?.instance,
+      traceId: problemDetails?.traceId,
+      validationErrors: normalizeValidationErrors(problemDetails?.errors),
+    },
+  );
+}
+
+function isApiResponse<T>(payload: unknown): payload is ApiResponse<T> {
+  return (
+    isRecord(payload) &&
+    typeof payload.success === "boolean" &&
+    typeof payload.message === "string" &&
+    "data" in payload
+  );
+}
+
+function parseProblemDetails(payload: unknown): ValidationProblemDetails | null {
+  if (!isRecord(payload)) return null;
+
+  return {
+    type: optionalString(payload.type),
+    title: optionalString(payload.title),
+    status: typeof payload.status === "number" ? payload.status : undefined,
+    detail: optionalString(payload.detail),
+    instance: optionalString(payload.instance),
+    traceId: optionalString(payload.traceId),
+    errors: normalizeValidationErrors(payload.errors),
+  };
+}
+
+function normalizeValidationErrors(errors: unknown) {
+  if (!isRecord(errors)) return {};
+
+  return Object.fromEntries(
+    Object.entries(errors).flatMap(([key, messages]) => {
+      if (!Array.isArray(messages)) return [];
+
+      const normalizedMessages = messages.filter(
+        (message): message is string => typeof message === "string",
+      );
+
+      return normalizedMessages.length > 0
+        ? [[key.toLowerCase(), normalizedMessages]]
+        : [];
+    }),
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function optionalString(value: unknown) {
+  return typeof value === "string" ? value : undefined;
 }
 
 function messageForStatus(status: number) {
@@ -176,8 +240,15 @@ export const publicPulseApi = {
 
     return request<LocationLookupResponse>(`/api/Locations/reverse?${params}`);
   },
-  listReports() {
-    return request<ReportListItemResponse[]>("/api/Reports");
+  listReports(pageNumber: number, pageSize = 10) {
+    const params = new URLSearchParams({
+      pageNumber: pageNumber.toString(),
+      pageSize: pageSize.toString(),
+    });
+
+    return request<PaginatedList<ReportListItemResponse>>(
+      `/api/Reports?${params}`,
+    );
   },
   getReport(id: string) {
     return request<ReportResponse>(`/api/Reports/${id}`);

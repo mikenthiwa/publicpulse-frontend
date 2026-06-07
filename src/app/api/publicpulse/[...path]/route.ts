@@ -52,11 +52,19 @@ async function proxyRequest(request: NextRequest, context: RouteContext) {
   } catch {
     return NextResponse.json(
       {
-        success: false,
-        message: "Unable to reach the PublicPulse API.",
-        data: null,
+        type: "https://tools.ietf.org/html/rfc7231#section-6.6.3",
+        title: "Upstream provider failed.",
+        status: 502,
+        detail: "Unable to reach the PublicPulse API.",
+        instance: request.nextUrl.pathname,
+        traceId: crypto.randomUUID(),
       },
-      { status: 502 },
+      {
+        status: 502,
+        headers: {
+          "content-type": "application/problem+json",
+        },
+      },
     );
   }
 }
