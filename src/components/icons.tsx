@@ -6,6 +6,7 @@ export type IconName =
   | "calendar"
   | "check-circle"
   | "chevron-left"
+  | "chevron-right"
   | "file-text"
   | "home"
   | "image"
@@ -77,6 +78,7 @@ const iconPaths: Record<IconName, React.ReactNode> = {
     </>
   ),
   "chevron-left": <path d="m15 18-6-6 6-6" />,
+  "chevron-right": <path d="m9 18 6-6-6-6" />,
   "file-text": (
     <>
       <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z" />

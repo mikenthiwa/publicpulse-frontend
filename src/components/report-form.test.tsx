@@ -421,6 +421,35 @@ describe("ReportForm", () => {
     expect(mocks.uploadReportImage).toHaveBeenCalled();
     expect(mocks.push).not.toHaveBeenCalled();
   });
+
+  it("renders matching validation errors inline and unmatched errors in the alert", async () => {
+    const user = userEvent.setup();
+
+    mocks.createReport.mockRejectedValue(
+      new ApiError("One or more validation failures have occurred.", 400, {
+        validationErrors: {
+          description: ["Description is required."],
+          "images[0].signature": ["Cloudinary image signature is invalid."],
+        },
+      }),
+    );
+
+    renderReportForm();
+    await fillReportFields();
+    await user.upload(
+      screen.getByLabelText("Images"),
+      new File(["image"], "road.jpg", { type: "image/jpeg" }),
+    );
+    fireEvent.submit(screen.getByRole("button", { name: "Submit report" }).closest("form")!);
+
+    expect(
+      await screen.findByText("One or more validation failures have occurred."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Description is required.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Cloudinary image signature is invalid."),
+    ).toBeInTheDocument();
+  });
 });
 
 async function fillReportFields() {

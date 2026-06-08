@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FieldErrors } from "@/components/field-errors";
 import { Icon } from "@/components/icons";
 import { Message } from "@/components/message";
 import { fieldLabel, inputControl, primaryButton, tertiaryLink } from "@/components/ui";
 import { useI18n } from "@/i18n/client";
 import { publicPulseApi } from "@/services/api";
 import { storeAuth } from "@/services/auth-storage";
+import { splitValidationErrors } from "@/services/validation-errors";
 import { ApiError } from "@/types/api";
 
 type AuthFormProps = {
   mode: "login" | "register";
 };
+
+const authFieldNames = ["email", "password"] as const;
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
@@ -21,12 +25,16 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isLogin = mode === "login";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setErrorDetails([]);
+    setFieldErrors({});
 
     if (!email.trim() || !password) {
       setError(messages.auth.requiredError);
@@ -45,11 +53,17 @@ export function AuthForm({ mode }: AuthFormProps) {
       router.push(href("/reports"));
       router.refresh();
     } catch (caughtError) {
-      setError(
-        caughtError instanceof ApiError
-          ? caughtError.message
-          : messages.auth.authError,
-      );
+      if (caughtError instanceof ApiError) {
+        const validation = splitValidationErrors(
+          caughtError.validationErrors,
+          authFieldNames,
+        );
+        setError(caughtError.message);
+        setErrorDetails(validation.unmatchedErrors);
+        setFieldErrors(validation.fieldErrors);
+      } else {
+        setError(messages.auth.authError);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -57,7 +71,18 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
-      {error ? <Message tone="error">{error}</Message> : null}
+      {error ? (
+        <Message tone="error">
+          <p>{error}</p>
+          {errorDetails.length > 0 ? (
+            <ul className="mt-1 list-disc pl-5">
+              {errorDetails.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          ) : null}
+        </Message>
+      ) : null}
       <label className={fieldLabel}>
         <span className="inline-flex items-center gap-2">
           <Icon name="mail" size={16} />
@@ -65,12 +90,20 @@ export function AuthForm({ mode }: AuthFormProps) {
         </span>
         <input
           autoComplete="email"
-          className={inputControl}
+          aria-describedby={fieldErrors.email?.length ? "email-errors" : undefined}
+          aria-invalid={fieldErrors.email?.length ? true : undefined}
+          className={`${inputControl} ${
+            fieldErrors.email?.length ? "border-[#c46b59]" : ""
+          }`}
           type="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setFieldErrors((current) => ({ ...current, email: [] }));
+          }}
           required
         />
+        <FieldErrors errors={fieldErrors.email} id="email-errors" />
       </label>
       <label className={fieldLabel}>
         <span className="inline-flex items-center gap-2">
@@ -79,12 +112,22 @@ export function AuthForm({ mode }: AuthFormProps) {
         </span>
         <input
           autoComplete={isLogin ? "current-password" : "new-password"}
-          className={inputControl}
+          aria-describedby={
+            fieldErrors.password?.length ? "password-errors" : undefined
+          }
+          aria-invalid={fieldErrors.password?.length ? true : undefined}
+          className={`${inputControl} ${
+            fieldErrors.password?.length ? "border-[#c46b59]" : ""
+          }`}
           type="password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setFieldErrors((current) => ({ ...current, password: [] }));
+          }}
           required
         />
+        <FieldErrors errors={fieldErrors.password} id="password-errors" />
       </label>
       <button
         className={primaryButton}

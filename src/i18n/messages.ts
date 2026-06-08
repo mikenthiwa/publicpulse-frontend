@@ -44,6 +44,9 @@ export const messages = {
       loadError: "Unable to load reports.",
       emptyTitle: "No reports yet",
       emptyBody: "Be the first to submit a public infrastructure report.",
+      previous: "Previous",
+      next: "Next",
+      pageStatus: "Page {page} of {total}",
     },
     reportCard: {
       location: "Location",
@@ -199,6 +202,9 @@ export const messages = {
       loadError: "Imeshindikana kupakia ripoti.",
       emptyTitle: "Hakuna ripoti bado",
       emptyBody: "Kuwa wa kwanza kuwasilisha ripoti ya miundombinu ya umma.",
+      previous: "Iliyotangulia",
+      next: "Inayofuata",
+      pageStatus: "Ukurasa wa {page} kati ya {total}",
     },
     reportCard: {
       location: "Mahali",

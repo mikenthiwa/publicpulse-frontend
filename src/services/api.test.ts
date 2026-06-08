@@ -31,15 +31,25 @@ describe("publicPulseApi", () => {
   });
 
   it("parses successful ApiResponse payloads", async () => {
+    const pagination = {
+      items: [report],
+      count: 21,
+      pageNumber: 2,
+      pageSize: 10,
+      totalPages: 3,
+      hasPreviousPage: true,
+      hasNextPage: true,
+    };
+
     mockFetchResponse(200, {
       success: true,
       message: "Reports retrieved successfully.",
-      data: [report],
+      data: pagination,
     });
 
-    await expect(publicPulseApi.listReports()).resolves.toEqual([report]);
+    await expect(publicPulseApi.listReports(2)).resolves.toEqual(pagination);
     expect(fetch).toHaveBeenCalledWith(
-      "/api/publicpulse/api/Reports",
+      "/api/publicpulse/api/Reports?pageNumber=2&pageSize=10",
       expect.objectContaining({
         method: "GET",
         cache: "no-store",
@@ -180,16 +190,63 @@ describe("publicPulseApi", () => {
     expect(body.get("signature")).toBe("upload-signature");
   });
 
-  it("throws ApiError with backend messages", async () => {
+  it("throws ApiError from ProblemDetails", async () => {
     mockFetchResponse(403, {
-      success: false,
-      message: "You do not own this report.",
-      data: null,
+      type: "https://tools.ietf.org/html/rfc7231#section-6.5.3",
+      title: "Forbidden.",
+      status: 403,
+      detail: "You do not own this report.",
+      instance: "/api/Reports/report-1/status",
+      traceId: "trace-1",
     });
 
     await expect(publicPulseApi.updateReportStatus("report-1", 2, "token-1")).rejects.toMatchObject({
       message: "You do not own this report.",
       status: 403,
+      title: "Forbidden.",
+      type: "https://tools.ietf.org/html/rfc7231#section-6.5.3",
+      instance: "/api/Reports/report-1/status",
+      traceId: "trace-1",
+    });
+  });
+
+  it("preserves validation errors from ValidationProblemDetails", async () => {
+    mockFetchResponse(400, {
+      type: "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+      title: "One or more validation errors occurred.",
+      status: 400,
+      detail: "One or more validation failures have occurred.",
+      instance: "/api/Auth/register",
+      traceId: "trace-2",
+      errors: {
+        Email: ["Email is required."],
+        Password: ["Password must be at least 8 characters."],
+      },
+    });
+
+    await expect(publicPulseApi.register({ email: "", password: "short" })).rejects.toMatchObject({
+      message: "One or more validation failures have occurred.",
+      status: 400,
+      validationErrors: {
+        email: ["Email is required."],
+        password: ["Password must be at least 8 characters."],
+      },
+    });
+  });
+
+  it("falls back to the status message for malformed error responses", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response("not-json", {
+        status: 404,
+        headers: {
+          "Content-Type": "text/plain",
+        },
+      }),
+    );
+
+    await expect(publicPulseApi.getReport("missing")).rejects.toMatchObject({
+      message: "That record could not be found.",
+      status: 404,
     });
   });
 

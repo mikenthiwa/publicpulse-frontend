@@ -4,6 +4,7 @@ import { AuthForm } from "@/components/auth-form";
 import { I18nProvider } from "@/i18n/client";
 import type { Locale } from "@/i18n/config";
 import { messages } from "@/i18n/messages";
+import { ApiError } from "@/types/api";
 
 const mocks = vi.hoisted(() => ({
   login: vi.fn(),
@@ -106,6 +107,32 @@ describe("AuthForm", () => {
       });
     });
     expect(mocks.storeAuth).toHaveBeenCalledWith(auth);
+  });
+
+  it("renders backend validation errors beside their auth fields", async () => {
+    const user = userEvent.setup();
+    mocks.register.mockRejectedValue(
+      new ApiError("One or more validation failures have occurred.", 400, {
+        validationErrors: {
+          email: ["Email is already registered."],
+          password: ["Password must be at least 8 characters."],
+        },
+      }),
+    );
+
+    renderAuthForm("register");
+
+    await user.type(screen.getByLabelText("Email"), "new@example.com");
+    await user.type(screen.getByLabelText("Password"), "password123");
+    await user.click(screen.getByRole("button", { name: "Register" }));
+
+    expect(
+      await screen.findByText("One or more validation failures have occurred."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Email is already registered.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Password must be at least 8 characters."),
+    ).toBeInTheDocument();
   });
 });
 
